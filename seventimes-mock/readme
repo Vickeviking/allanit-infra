@@ -1,0 +1,12 @@
+# Allanit Infra
+Monorepo med:
+- `services/seventimes-mock` (FastAPI) som mockar ett Seventime-liknande API.
+- Postgres för persistens.
+- `docker-compose.yml` för att starta allt.
+
+## Snabbstart
+1) Kopiera .env-exempel om du vill justera lokalt (frivilligt).
+2) Starta:
+   docker compose up --build
+3) Testa:
+   curl -H "Client-Secret: dev-secret" http://localhost:4000/api/v1/customers

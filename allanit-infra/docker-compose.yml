@@ -1,0 +1,35 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: allanit_infra_db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=app_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: allanit_infra_redis
+
+  core:
+    build:
+      context: ./allanit_infra
+      dockerfile: dockerfile
+    container_name: allanit_infra_core
+    working_dir: /usr/src/allanit_infra
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/app_db
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "8000:8000" # HTTP
+      - "5001:5001/udp" # UDP heartbeat
+    volumes:
+      - ./allanit_infra:/usr/src/allanit_infra
+
+volumes:
+  postgres_data: {}

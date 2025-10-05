@@ -1,0 +1,25 @@
+[workspace]
+members = ["core", "common"]
+resolver = "2"
+
+[workspace.dependencies]
+tokio          = { version = "1",      features = ["full"] }
+tokio-stream   = { version = "0.1.17", features = ["sync"] }
+cron           = "0.15.0"
+futures        = "0.3.31"
+lsp_doc_stable = "0.1.0"
+thiserror      = "2.0.12"
+anyhow         = "1.0"
+serde          = { version = "1.0", features = ["derive"] }
+serde_json     = "1.0"
+chrono         = { version = "0.4", features = ["serde"] }
+uuid           = { version = "1.16.0", features = ["v4"] }
+rand           = "0.8"
+
+# DB stack (shared defaults)
+diesel         = { version = "2.1",  features = ["postgres", "chrono"] }
+diesel-async   = { version = "0.4",  features = ["postgres"] }
+
+# Crypto
+argon2         = { version = "0.4", default-features = false, features = ["std"] }
+

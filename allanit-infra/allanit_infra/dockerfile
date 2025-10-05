@@ -1,0 +1,36 @@
+# ./Dockerfile  –  single‑stage dev image
+FROM rust:latest AS dev
+
+# ---- 1. workspace root ----------------------------------------------------
+WORKDIR /app
+
+# Copy manifests first → better layer‑cache
+COPY Cargo.toml Cargo.lock ./
+COPY common/Cargo.toml      common/Cargo.toml
+COPY core/Cargo.toml         core/Cargo.toml
+
+# Pre‑fetch deps so later code changes don’t invalidate cache
+RUN cargo fetch
+
+# ---- 2. full source -------------------------------------------------------
+COPY . .
+
+# ---- 3. extra dev tools ---------------------------------------------------
+RUN cargo install diesel_cli --no-default-features --features postgres
+RUN cargo install cargo-watch
+
+# ---- 4. default command ---------------------------------------------------
+# Re‑build the Rocket backend crate (“commanddeck”) on file change
+CMD ["cargo", "watch", "--why", "-x", "run -p core"]
+
+
+
+
+
+
+
+
+
+
+
+

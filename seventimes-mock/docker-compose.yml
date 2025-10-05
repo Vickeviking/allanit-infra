@@ -1,0 +1,35 @@
+version: "3.9"
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: sev
+      POSTGRES_PASSWORD: sev
+      POSTGRES_DB: sev_mock
+    ports:
+      - "5433:5432"
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+      - ./database/migrate.sql:/docker-entrypoint-initdb.d/10_migrate.sql:ro
+      - ./database/seed.sql:/docker-entrypoint-initdb.d/20_seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sev -d sev_mock"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  seventimes-mock:
+    build:
+      context: ./services/seventimes-mock
+    environment:
+      PORT: 4000
+      CLIENT_SECRET: dev-secret
+      DATABASE_URL: postgresql://sev:sev@db:5432/sev_mock
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "4000:4000"
+
+volumes:
+  dbdata:
