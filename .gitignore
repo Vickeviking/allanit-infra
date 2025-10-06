@@ -1,0 +1,58 @@
+# === Rust & Cargo ===
+/target/
+**/target/
+Cargo.lock
+*.rs.bk
+
+# === Build artifacts ===
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
+*.lib
+*.o
+*.obj
+*.rlib
+
+# === IDEs & Editors ===
+# VSCode
+.vscode/
+# JetBrains (CLion, IntelliJ, RustRover)
+.idea/
+# Sublime / Vim / Emacs
+*.swp
+*.swo
+*.swn
+*.tmp
+*~
+.#*
+.DS_Store
+
+# === Logs & Temp ===
+*.log
+*.out
+*.pid
+*.old
+*.bak
+
+# === System & OS files ===
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# === Archives ===
+*.zip
+*.tar
+*.tar.gz
+*.7z
+*.rar
+
+# === Docker & Compose ===
+*.env
+docker-compose.override.yml
+
+# === Docs / Generated ===
+docs/generated/
+book/
+
