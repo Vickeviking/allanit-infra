@@ -126,6 +126,14 @@ pub enum LogActionEnum {
     // API
     ApiRequest,
     ApiResponseError,
+
+    // Debug / Internal
+    DebugPulse,
+    DebugModuleActive,
+    DebugPipeMessage,
+    DebugEventReceived,
+    DebugNotificationSent,
+    MessageReceived,
 }
 
 // used for logging alternatives, for choosing log level in dialoguer
@@ -158,6 +166,12 @@ impl LogActionEnum {
             "MailFailed",
             "ApiRequest",
             "ApiResponseError",
+            "DebugPulse",
+            "DebugModuleActive",
+            "DebugPipeMessage",
+            "DebugEventReceived",
+            "DebugNotificationSent",
+            "MessageReceived",
         ]
     }
 }
@@ -192,6 +206,12 @@ impl From<usize> for LogActionEnum {
             23 => LogActionEnum::MailFailed,
             24 => LogActionEnum::ApiRequest,
             25 => LogActionEnum::ApiResponseError,
+            26 => LogActionEnum::DebugPulse,
+            27 => LogActionEnum::DebugModuleActive,
+            28 => LogActionEnum::DebugPipeMessage,
+            29 => LogActionEnum::DebugEventReceived,
+            30 => LogActionEnum::DebugNotificationSent,
+            31 => LogActionEnum::MessageReceived,
             _ => LogActionEnum::SystemStartup,
         }
     }
@@ -227,10 +247,12 @@ impl fmt::Display for LogActionEnum {
             LogActionEnum::MailFailed => "MailFailed",
             LogActionEnum::ApiRequest => "ApiRequest",
             LogActionEnum::ApiResponseError => "ApiResponseError",
-            LogActionEnum::ClientConnected => "ClientConnected",
-            LogActionEnum::JobSubmitted => "JobSubmitted",
-            LogActionEnum::JobCompleted => "JobCompleted",
-            LogActionEnum::Custom => "Custom",
+            LogActionEnum::DebugPulse => "DebugPulse",
+            LogActionEnum::DebugModuleActive => "DebugModuleActive",
+            LogActionEnum::DebugPipeMessage => "DebugPipeMessage",
+            LogActionEnum::DebugEventReceived => "DebugEventReceived",
+            LogActionEnum::DebugNotificationSent => "DebugNotificationSent",
+            LogActionEnum::MessageReceived => "MessageReceived",
         };
         write!(f, "{}", s)
     }
@@ -268,10 +290,12 @@ impl FromStr for LogActionEnum {
             "MailFailed" => Ok(LogActionEnum::MailFailed),
             "ApiRequest" => Ok(LogActionEnum::ApiRequest),
             "ApiResponseError" => Ok(LogActionEnum::ApiResponseError),
-            "ClientConnected" => Ok(LogActionEnum::ClientConnected),
-            "JobSubmitted" => Ok(LogActionEnum::JobSubmitted),
-            "JobCompleted" => Ok(LogActionEnum::JobCompleted),
-            "Custom" => Ok(LogActionEnum::Custom),
+            "DebugPulse" => Ok(LogActionEnum::DebugPulse),
+            "DebugModuleActive" => Ok(LogActionEnum::DebugModuleActive),
+            "DebugPipeMessage" => Ok(LogActionEnum::DebugPipeMessage),
+            "DebugEventReceived" => Ok(LogActionEnum::DebugEventReceived),
+            "DebugNotificationSent" => Ok(LogActionEnum::DebugNotificationSent),
+            "MessageReceived" => Ok(LogActionEnum::MessageReceived),
             _ => Err(()),
         }
     }
@@ -307,10 +331,12 @@ impl FromSql<Text, Pg> for LogActionEnum {
             b"MailFailed" => Ok(LogActionEnum::MailFailed),
             b"ApiRequest" => Ok(LogActionEnum::ApiRequest),
             b"ApiResponseError" => Ok(LogActionEnum::ApiResponseError),
-            b"ClientConnected" => Ok(LogActionEnum::ClientConnected),
-            b"JobSubmitted" => Ok(LogActionEnum::JobSubmitted),
-            b"JobCompleted" => Ok(LogActionEnum::JobCompleted),
-            b"Custom" => Ok(LogActionEnum::Custom),
+            b"DebugPulse" => Ok(LogActionEnum::DebugPulse),
+            b"DebugModuleActive" => Ok(LogActionEnum::DebugModuleActive),
+            b"DebugPipeMessage" => Ok(LogActionEnum::DebugPipeMessage),
+            b"DebugEventReceived" => Ok(LogActionEnum::DebugEventReceived),
+            b"DebugNotificationSent" => Ok(LogActionEnum::DebugNotificationSent),
+            b"MessageReceived" => Ok(LogActionEnum::MessageReceived),
             _ => Err("Unexpected value".into()),
         }
     }
@@ -349,10 +375,12 @@ impl ToSql<Text, Pg> for LogActionEnum {
             LogActionEnum::MailFailed => out.write_all(b"MailFailed")?,
             LogActionEnum::ApiRequest => out.write_all(b"ApiRequest")?,
             LogActionEnum::ApiResponseError => out.write_all(b"ApiResponseError")?,
-            LogActionEnum::ClientConnected => out.write_all(b"ClientConnected")?,
-            LogActionEnum::JobSubmitted => out.write_all(b"JobSubmitted")?,
-            LogActionEnum::JobCompleted => out.write_all(b"JobCompleted")?,
-            LogActionEnum::Custom => out.write_all(b"Custom")?,
+            LogActionEnum::DebugPulse => out.write_all(b"DebugPulse")?,
+            LogActionEnum::DebugModuleActive => out.write_all(b"DebugModuleActive")?,
+            LogActionEnum::DebugPipeMessage => out.write_all(b"DebugPipeMessage")?,
+            LogActionEnum::DebugEventReceived => out.write_all(b"DebugEventReceived")?,
+            LogActionEnum::DebugNotificationSent => out.write_all(b"DebugNotificationSent")?,
+            LogActionEnum::MessageReceived => out.write_all(b"MessageReceived")?,
         }
         Ok(diesel::serialize::IsNull::No)
     }

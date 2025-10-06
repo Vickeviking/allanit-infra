@@ -1,8 +1,5 @@
-use std::{path::PathBuf, sync::Arc};
-
 use chrono::{NaiveDateTime, Utc};
-use diesel::prelude::{ExpressionMethods, QueryDsl};
-use diesel_async::{AsyncPgConnection, RunQueryDsl}; // async execute/delete
+use std::{path::PathBuf, sync::Arc};
 use tokio::{
     fs::OpenOptions,
     io::AsyncWriteExt,
@@ -10,40 +7,77 @@ use tokio::{
     sync::{broadcast::Receiver, Mutex, RwLock},
 };
 
-use crate::core::PulseSubscriptions;
+use crate::services::PulseSubscriptions;
 use common::commands::load_db_connection;
-use common::database::models::log::{
-    ClientConnectedPayload, JobCompletedPayload, JobSubmittedPayload, LogEntry, NewDBLogEntry,
-};
-use common::enums::log::{LogActionEnum, LogLevelEnum};
-use common::enums::system::{CoreEvent, Pulse, SystemModuleEnum};
+use common::enums::{CoreEvent, LogActionEnum, LogLevelEnum, Pulse, SystemModuleEnum};
 
-/// Central logger accessed by all modules
+use common::database::{models::log::NewLogEntry, repositories::log::LogRepository};
+
+/// Controls where logs are persisted
+#[derive(Debug, Clone, Copy)]
+pub enum LogSinkMode {
+    /// Only in-memory + NDJSON file/stdout
+    MemoryNdjson,
+    /// Writes to Postgres (fallback to NDJSON if DB down)
+    Postgres,
+}
+
+/// Simple in-memory log buffer entry
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct BufLog {
+    pub created_at: NaiveDateTime,
+    pub expires_at: NaiveDateTime,
+    pub level: LogLevelEnum,
+    pub module: SystemModuleEnum,
+    pub action: LogActionEnum,
+    pub custom_msg: Option<String>,
+}
+
+impl From<&BufLog> for NewLogEntry {
+    fn from(b: &BufLog) -> Self {
+        Self {
+            created_at: b.created_at,
+            expires_at: b.expires_at,
+            level: b.level.clone(),
+            module: b.module.clone(),
+            action: b.action.clone(),
+            custom_msg: b.custom_msg.clone(),
+        }
+    }
+}
+
+/// Central asynchronous logger
 pub struct Logger {
-    /// in-memory log buffer, flushed on pulse/shutdown
-    buffer_logs: RwLock<Vec<LogEntry>>,
-    /// Life cycle events, controls Logger behavior
+    /// In-memory buffer flushed on pulse/shutdown
+    buffer_logs: RwLock<Vec<BufLog>>,
+    /// Lifecycle events (Startup/Restart/Shutdown)
     core_event_rx: Mutex<Receiver<CoreEvent>>,
-    /// Slow pulse every ~2s
+    /// Slow pulse (~2s)
     pulse_rx: Mutex<Receiver<Pulse>>,
-    /// Optional NDJSON file sink (fallback when DB is unavailable)
+    /// Optional NDJSON file sink
     file_sink: Option<Mutex<tokio::fs::File>>,
+    /// Determines sink type
+    sink_mode: LogSinkMode,
 }
 
 impl Logger {
-    /* ---------------- construction + background loop -------------------- */
-    /// Init logger, only one instance ever running
-    /// NOTE: prefer constructing via `Logger::from_env(...)` to auto-enable file sink
+    /* ---------------- construction -------------------- */
+
     pub fn new(core_rx: Receiver<CoreEvent>, pulse_subs: Arc<PulseSubscriptions>) -> Self {
         Self {
             buffer_logs: RwLock::new(Vec::new()),
             core_event_rx: Mutex::new(core_rx),
             pulse_rx: Mutex::new(pulse_subs.subscribe_slow()),
             file_sink: None,
+            sink_mode: LogSinkMode::MemoryNdjson,
         }
     }
 
-    /// Builder that enables NDJSON file fallback if `path` is Some.
+    pub fn with_sink_mode(mut self, mode: LogSinkMode) -> Self {
+        self.sink_mode = mode;
+        self
+    }
+
     pub async fn with_file_sink(mut self, path: Option<PathBuf>) -> Self {
         if let Some(p) = path {
             if let Ok(f) = OpenOptions::new().create(true).append(true).open(p).await {
@@ -53,16 +87,29 @@ impl Logger {
         self
     }
 
-    /// Convenience: builds logger and reads `LOG_FILE` from env to enable file sink
+    /// Builds logger from env vars:
+    /// LOG_FILE=/path/to/file.ndjson
+    /// LOG_SINK=pg|memory
     pub async fn from_env(
         core_rx: Receiver<CoreEvent>,
         pulse_subs: Arc<PulseSubscriptions>,
     ) -> Self {
         let path = std::env::var_os("LOG_FILE").map(PathBuf::from);
-        Logger::new(core_rx, pulse_subs).with_file_sink(path).await
+        let mode = match std::env::var("LOG_SINK")
+            .unwrap_or_else(|_| "memory".into())
+            .as_str()
+        {
+            "pg" | "postgres" => LogSinkMode::Postgres,
+            _ => LogSinkMode::MemoryNdjson,
+        };
+        Logger::new(core_rx, pulse_subs)
+            .with_sink_mode(mode)
+            .with_file_sink(path)
+            .await
     }
 
-    /// Spawn this on Tokio runtime: `tokio::spawn(logger.clone().init())`.
+    /* ---------------- background loop -------------------- */
+
     pub async fn init(self: Arc<Self>) {
         let mut core_rx = self.core_event_rx.lock().await;
         let mut pulse_rx = self.pulse_rx.lock().await;
@@ -71,12 +118,13 @@ impl Logger {
                 Ok(ev) = core_rx.recv() => match ev {
                     CoreEvent::Startup => {},
                     CoreEvent::Restart => { self.store_all_logs().await; },
-                    CoreEvent::Shutdown => { self.store_all_logs().await; break; },
+                    CoreEvent::Shutdown => {
+                        self.store_all_logs().await;
+                        println!("Logger | Shutdown complete.");
+                        break;
+                    },
                 },
                 Ok(pulse) = pulse_rx.recv() => {
-                    // On pulse we do 2 things
-                    // 1. flush buffer to DB (or NDJSON fallback)
-                    // 2. delete expired rows (best-effort)
                     if matches!(pulse, Pulse::Slow) {
                         self.try_clean().await;
                         self.store_all_logs().await;
@@ -86,8 +134,8 @@ impl Logger {
         }
     }
 
-    /* ---------------- public API (ergonomic helpers) -------------------- */
-    /// Core entry-point (buffer append). Prefer the convenience wrappers below.
+    /* ---------------- public API -------------------- */
+
     #[allow(clippy::too_many_arguments)]
     pub async fn log(
         logger: Arc<Self>,
@@ -97,24 +145,19 @@ impl Logger {
         custom: Option<String>,
     ) {
         let now = Utc::now().naive_utc();
-        let expires_at = match level {
-            LogLevelEnum::Info => now + chrono::Duration::minutes(5),
-            LogLevelEnum::Success => now + chrono::Duration::days(1),
-            LogLevelEnum::Warning => now + chrono::Duration::days(3),
-            LogLevelEnum::Error | LogLevelEnum::Fatal => now + chrono::Duration::days(7),
-        };
-        logger.buffer_logs.write().await.push(LogEntry {
-            id: 0,
+        // ttl_for tar &LogLevelEnum, så låna bara:
+        let expires_at = Self::ttl_for(&level, now);
+
+        logger.buffer_logs.write().await.push(BufLog {
             created_at: now,
-            level,
+            expires_at,
+            level, // flytta in värdet (ingen clone behövs)
             module,
             action,
-            expires_at,
-            custom_msg: custom,
+            custom_msg: custom, // Option<String> flyttas in
         });
     }
 
-    /// Small, ergonomic wrapper around `log` for direct `&self` usage.
     pub async fn log_now(
         &self,
         level: LogLevelEnum,
@@ -122,140 +165,84 @@ impl Logger {
         action: LogActionEnum,
         custom: impl Into<Option<String>>,
     ) {
-        Self::log(
-            Arc::new(self.clone_self()),
+        let now = Utc::now().naive_utc();
+        let expires_at = Self::ttl_for(&level, now);
+        self.buffer_logs.write().await.push(BufLog {
+            created_at: now,
+            expires_at,
             level,
             module,
             action,
-            custom.into(),
+            custom_msg: custom.into(),
+        });
+    }
+
+    pub async fn debug_mod(&self, module: SystemModuleEnum, msg: impl Into<String>) {
+        let m = format!("[debug] {}", msg.into());
+        self.log_now(
+            LogLevelEnum::Info,
+            module,
+            LogActionEnum::DebugPipeMessage,
+            Some(m),
         )
         .await;
     }
 
-    /// Convenience: Info
-    pub async fn info_mod(
-        &self,
-        module: SystemModuleEnum,
-        action: LogActionEnum,
-        msg: impl Into<Option<String>>,
-    ) {
-        self.log_now(LogLevelEnum::Info, module, action, msg).await;
-    }
+    /* ---------------- internal helpers -------------------- */
 
-    /// Convenience: Success
-    pub async fn success_mod(
-        &self,
-        module: SystemModuleEnum,
-        action: LogActionEnum,
-        msg: impl Into<Option<String>>,
-    ) {
-        self.log_now(LogLevelEnum::Success, module, action, msg)
-            .await;
-    }
-
-    /// Convenience: Warning
-    pub async fn warn_mod(
-        &self,
-        module: SystemModuleEnum,
-        action: LogActionEnum,
-        msg: impl Into<Option<String>>,
-    ) {
-        self.log_now(LogLevelEnum::Warning, module, action, msg)
-            .await;
-    }
-
-    /// Convenience: Error
-    pub async fn error_mod(
-        &self,
-        module: SystemModuleEnum,
-        action: LogActionEnum,
-        msg: impl Into<Option<String>>,
-    ) {
-        self.log_now(LogLevelEnum::Error, module, action, msg).await;
-    }
-
-    /// Convenience: Fatal
-    pub async fn fatal_mod(
-        &self,
-        module: SystemModuleEnum,
-        action: LogActionEnum,
-        msg: impl Into<Option<String>>,
-    ) {
-        self.log_now(LogLevelEnum::Fatal, module, action, msg).await;
-    }
-
-    /// Debug helper. Maps to Info TTL but tags message.
-    pub async fn debug_mod(&self, module: SystemModuleEnum, msg: impl Into<String>) {
-        let m = format!("[debug] {}", msg.into());
-        self.log_now(LogLevelEnum::Info, module, LogActionEnum::Custom, Some(m))
-            .await;
-    }
-
-    /// Tiny utility so the `&self` helpers can call `log` without requiring callers to hold an Arc.
-    fn clone_self(&self) -> Self {
-        Self {
-            buffer_logs: RwLock::new(Vec::new()), // not used; `log` does not read these fields from this clone
-            core_event_rx: Mutex::new(self.core_event_rx.blocking_lock().clone()),
-            pulse_rx: Mutex::new(self.pulse_rx.blocking_lock().clone()),
-            file_sink: self.file_sink.as_ref().map(|_| None).flatten(), // file sink not needed for helpers
+    fn ttl_for(level: &LogLevelEnum, now: NaiveDateTime) -> NaiveDateTime {
+        match level {
+            LogLevelEnum::Info => now + chrono::Duration::minutes(5),
+            LogLevelEnum::Success => now + chrono::Duration::days(1),
+            LogLevelEnum::Warning => now + chrono::Duration::days(3),
+            LogLevelEnum::Error | LogLevelEnum::Fatal => now + chrono::Duration::days(7),
         }
     }
 
-    /* ---------------- internal helpers --------------------------------- */
-
-    /// Flush buffer → DB (best‑effort). Fallback: NDJSON to stdout and optional file.
+    /// Flush buffer → chosen sink
     pub async fn store_all_logs(&self) {
-        let mut pending: Vec<LogEntry> = {
+        let pending: Vec<BufLog> = {
             let mut guard = self.buffer_logs.write().await;
-            guard.drain(..).collect()
-        };
-        if pending.is_empty() {
-            return;
-        }
-        println!("Logger: flushing {} entries to DB", pending.len());
-
-        match Self::insert_batch(&mut pending).await {
-            Ok(_) => println!("Logger: flush OK"),
-            Err(e) => {
-                eprintln!("Logger: DB flush failed: {e}. Writing NDJSON fallback.");
-                Self::write_ndjson_stdout(&pending).await;
-                self.write_ndjson_file(&pending).await;
-                // Do NOT push back into buffer: NDJSON is considered persisted for now.
-            }
-        }
-    }
-
-    /// Delete expired rows from DB on slow pulse (best effort). Ignores errors if DB is down.
-    pub async fn try_clean(&self) {
-        let mut conn = match load_db_connection().await {
-            Ok(c) => c,
-            Err(e) => {
-                eprintln!("Logger: cleanup DB connect error: {e}");
+            if guard.is_empty() {
                 return;
             }
+            guard.drain(..).collect()
         };
-        let now: NaiveDateTime = Utc::now().naive_utc();
-        use common::database::schema::logs::dsl as l;
-        if let Err(e) = diesel::delete(l::logs.filter(l::expires_at.lt(now)))
-            .execute(&mut conn)
-            .await
-        {
-            eprintln!("Logger: cleanup delete error: {e}");
+
+        match self.sink_mode {
+            LogSinkMode::Postgres => {
+                if let Ok(mut conn) = load_db_connection().await {
+                    let batch: Vec<NewLogEntry> = pending.iter().map(NewLogEntry::from).collect();
+                    match LogRepository::insert_batch(&mut conn, &batch).await {
+                        Ok(_) => return, // flushed to DB
+                        Err(e) => {
+                            eprintln!("Logger: DB flush failed: {e}. Falling back to NDJSON.")
+                        }
+                    }
+                } else {
+                    eprintln!("Logger: no DB connection; falling back to NDJSON.");
+                }
+                Self::write_ndjson_stdout(&pending).await;
+                self.write_ndjson_file(&pending).await;
+            }
+            LogSinkMode::MemoryNdjson => {
+                Self::write_ndjson_stdout(&pending).await;
+                self.write_ndjson_file(&pending).await;
+            }
         }
     }
 
-    /// Insert a batch of log entries to the DB.
-    async fn insert_batch(entries: &[LogEntry]) -> anyhow::Result<()> {
-        let mut conn: AsyncPgConnection = load_db_connection().await?;
-        for e in entries {
-            let new_row: NewDBLogEntry = e.into();
-            let _ = LogEntryRepository::create(&mut conn, new_row).await; // ignore per-row errors
+    /// Cleanup expired rows (DB mode only)
+    pub async fn try_clean(&self) {
+        if !matches!(self.sink_mode, LogSinkMode::Postgres) {
+            return;
         }
-        Ok(())
+        if let Ok(mut conn) = load_db_connection().await {
+            let _ = LogRepository::delete_expired(&mut conn).await;
+        }
     }
 
-    /// Write NDJSON lines to stdout so they show in `docker compose logs`.
-    async fn write_ndjson_stdout(entries: &[LogEntry]) {
+    async fn write_ndjson_stdout(entries: &[BufLog]) {
         for e in entries {
             match serde_json::to_string(e) {
                 Ok(line) => println!("LOG_NDJSON {}", line),
@@ -264,8 +251,7 @@ impl Logger {
         }
     }
 
-    /// Append NDJSON lines to the optional file sink, if configured.
-    async fn write_ndjson_file(&self, entries: &[LogEntry]) {
+    async fn write_ndjson_file(&self, entries: &[BufLog]) {
         if let Some(file) = &self.file_sink {
             let mut f = file.lock().await;
             for e in entries {

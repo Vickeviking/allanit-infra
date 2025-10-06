@@ -17,11 +17,10 @@ COPY . .
 
 # ---- 3. extra dev tools ---------------------------------------------------
 RUN cargo install diesel_cli --no-default-features --features postgres
-RUN cargo install cargo-watch
 
 # ---- 4. default command ---------------------------------------------------
-# Re‑build the Rocket backend crate (“commanddeck”) on file change
-CMD ["cargo", "watch", "--why", "-x", "run -p core"]
+CMD ["cargo", "run", "-p", "core"]
+
 
 
 

@@ -14,16 +14,12 @@ pub enum ChannelType {
 }
 
 // ====== Channel PAYLOAD ======
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum EventPayload {
     CoreEvent(CoreEvent),
     NotificationEvent(NotificationEvent),
 
     // domän:
-    UpsertCustomers(Vec<Customer>),
-    UpsertPurchaseOrders(Vec<PurchaseOrder>),
-
-    // kvittenser och admin:
     IngestAck,
     DbAck,
     ReprocessRequest { count: usize },
@@ -44,10 +40,7 @@ impl NotificationEvent {
     }
 }
 
-/// Global module channels for system-wide events.
-/// - `core_event_tx` broadcasts events to all subscribers.
-/// - `corebridge_to_main_tx` and `corebridge_to_main_rx` form a one-to-one channel.
-#[doc = include_str!("../../../docs/core/modules/service_channels.md")]
+/// Global broadcast for system-wide events.
 pub struct ModuleChannels {
     pub core_event_tx: broadcast::Sender<CoreEvent>,
 }
@@ -82,79 +75,66 @@ type ChannelPair = (
 
 /// ModuleWiring encapsulates the one-to-one communication channels between modules.
 /// This structure manages each channel identified by `ChannelType`.
-//WARNING: Really usefull but sadly not yet implemented, this is how mpsc is used, please read docs
-//in notion
 pub struct ModuleWiring {
-    inner: RwLock<HashMap<ChannelType, ChannelPair>>,
+    map: HashMap<
+        ChannelType,
+        (
+            Option<mpsc::UnboundedSender<EventPayload>>,
+            Option<mpsc::UnboundedReceiver<EventPayload>>,
+        ),
+    >,
 }
 
 impl ModuleWiring {
     pub fn new() -> Self {
-        ModuleWiring {
-            inner: RwLock::new(HashMap::new()),
+        Self {
+            map: HashMap::new(),
         }
     }
 
-    /// Adds a new one-to-one channel identified by the given `ChannelType`.
-    pub async fn add_channel(
-        &self,
+    /// Lägg till en 1-1-kanal
+    pub fn add_channel(
+        &mut self,
         channel: ChannelType,
         tx: mpsc::UnboundedSender<EventPayload>,
         rx: mpsc::UnboundedReceiver<EventPayload>,
     ) {
-        let mut state = self.inner.write().await;
-        state.insert(channel, (Some(tx), Some(rx)));
+        self.map.insert(channel, (Some(tx), Some(rx)));
     }
 
-    /// Takes ownership of the sender end for the specified channel,
-    /// leaving the receiver end intact.
-    pub async fn take_tx(
-        &self,
-        channel: ChannelType,
-    ) -> Option<mpsc::UnboundedSender<EventPayload>> {
-        let mut state = self.inner.write().await;
-        state.get_mut(&channel)?.0.take()
+    /// Ta ägarskap av TX
+    pub fn take_tx(&mut self, channel: ChannelType) -> Option<mpsc::UnboundedSender<EventPayload>> {
+        self.map.get_mut(&channel)?.0.take()
     }
 
-    /// Takes ownership of the receiver end for the specified channel,
-    /// leaving the sender end intact.
-    pub async fn take_rx(
-        &self,
+    /// Ta ägarskap av RX
+    pub fn take_rx(
+        &mut self,
         channel: ChannelType,
     ) -> Option<mpsc::UnboundedReceiver<EventPayload>> {
-        let mut state = self.inner.write().await;
-        state.get_mut(&channel)?.1.take()
+        self.map.get_mut(&channel)?.1.take()
     }
 
-    /// Gets a clone of the sender end for the specified channel.
-    pub async fn get_tx(
-        &self,
-        channel: ChannelType,
-    ) -> Option<mpsc::UnboundedSender<EventPayload>> {
-        let state = self.inner.read().await;
-        state.get(&channel).and_then(|(tx, _)| tx.clone())
+    /// Hämta en klon av TX (utan att ta ägarskap)
+    pub fn get_tx(&self, channel: ChannelType) -> Option<mpsc::UnboundedSender<EventPayload>> {
+        self.map.get(&channel).and_then(|(tx, _)| tx.clone())
     }
 
-    /// Checks if both ends have been taken for cleanup (optional utility).
-    pub async fn remove_if_empty(&self, channel: ChannelType) {
-        let mut state = self.inner.write().await;
-        if let Some((tx, rx)) = state.get(&channel) {
+    /// Rensa bort kanalen om både TX och RX är borttagna
+    pub fn remove_if_empty(&mut self, channel: ChannelType) {
+        if let Some((tx, rx)) = self.map.get(&channel) {
             if tx.is_none() && rx.is_none() {
-                state.remove(&channel);
+                self.map.remove(&channel);
             }
         }
     }
 
-    /// Checks if the sender end exists for the given channel.
-    pub async fn tx_exists(&self, channel: ChannelType) -> bool {
-        let state = self.inner.read().await;
-        state.get(&channel).is_some_and(|(tx, _)| tx.is_some())
+    pub fn tx_exists(&self, channel: ChannelType) -> bool {
+        self.map.get(&channel).is_some_and(|(tx, _)| tx.is_some())
     }
 
-    /// Checks if the receiver end exists for the given channel.
-    pub async fn rx_exists(&self, channel: ChannelType) -> bool {
-        let state = self.inner.read().await;
-        state.get(&channel).is_some_and(|(_, rx)| rx.is_some())
+    pub fn rx_exists(&self, channel: ChannelType) -> bool {
+        self.map.get(&channel).is_some_and(|(_, rx)| rx.is_some())
     }
 }
 
@@ -169,7 +149,7 @@ impl Default for ModuleWiring {
 async fn test_module_wiring() {
     let wiring = ModuleWiring::new();
     let (tx, rx) = mpsc::unbounded_channel::<EventPayload>();
-    let chan = ChannelType::CoreBridgeToMainCoreEvents;
+    let chan = ChannelType::FetcherToIngestor;
 
     // Add channel
     wiring.add_channel(chan.clone(), tx.clone(), rx).await;

@@ -1,7 +1,7 @@
 use crate::core::shared_resources::SharedResources;
-use crate::core::PulseBroadcaster;
-use crate::core::{ModuleInitializer, ServiceInitializer};
-use crate::services::{ServiceChannels, ServiceWiring};
+use crate::modules::{Logger, ModuleChannels, ModuleInitializer, ModuleWiring};
+use crate::services::{PulseBroadcaster, ServiceInitializer};
+
 use common::enums::system::CoreEvent;
 use std::sync::Arc;
 use tokio::runtime::Runtime;
@@ -22,29 +22,29 @@ fn main() {
 }
 
 async fn tokio_async_runtime() -> anyhow::Result<(), anyhow::Error> {
-    // === Init Services ===
-    let service_channels = Arc::new(ServiceChannels::new());
-    let service_wiring = Arc::new(Mutex::new(ServiceWiring::new()));
-    let pulse_broadcaster = PulseBroadcaster::new(service_channels.subscribe_to_core_event());
+    // === Init underlying railway ===
+    let module_channels = Arc::new(ModuleChannels::new());
+    let module_wiring = Arc::new(Mutex::new(ModuleWiring::new()));
+    let pulse_broadcaster = PulseBroadcaster::new(module_channels.subscribe_to_core_event());
 
     // === Logger and shared_resources ===
-    let logger = Arc::new(
+    let logger: Arc<Logger> = Arc::new(
         Logger::from_env(
-            service_channels.subscribe_to_core_event(),
+            module_channels.subscribe_to_core_event(),
             Arc::new(pulse_broadcaster.subscriptions()),
         )
         .await,
     );
     tokio::spawn({
-        let logger = Arc::clone(&logger);
+        let logger: Arc<Logger> = Arc::clone(&logger);
         async move { logger.init().await }
     });
 
     let shared_resources = Arc::new(SharedResources::new(
         Arc::clone(&logger),
         Arc::new(pulse_broadcaster.subscriptions()),
-        Arc::clone(&service_channels),
-        service_wiring,
+        Arc::clone(&module_channels),
+        module_wiring,
     ));
 
     // ===== Create and start the services ====
@@ -53,19 +53,19 @@ async fn tokio_async_runtime() -> anyhow::Result<(), anyhow::Error> {
     let shutdown_notify = initializer.shutdown_notify.clone();
     let _ = initializer.start()?;
     // ==== create and start modules ====
-    let module_handles = ModuleInitializer::new(Arc::clone(&shared)).await;
+    let module_handles = ModuleInitializer::new(Arc::clone(&shared_resources)).await;
 
     // Send startup signal to all services
-    service_channels
-        .send_event_to_all_services(CoreEvent::Startup)
+    module_channels
+        .send_event_to_all_modules(CoreEvent::Startup)
         .await;
     println!("System started. Awaiting commands...");
 
     // Loop to handle shutdown events
     shutdown_notify.notified().await;
     println!("Notify‐based shutdown triggered.");
-    service_channels
-        .send_event_to_all_services(CoreEvent::Shutdown)
+    module_channels
+        .send_event_to_all_modules(CoreEvent::Shutdown)
         .await;
     module_handles.join_tasks().await;
     println!("Shutdown complete.");

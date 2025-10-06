@@ -1,93 +1,173 @@
 use crate::core::shared_resources::SharedResources;
 use crate::modules::logger::Logger;
-use crate::modules::module_channels::{
-    ChannelType, EventPayload, ModuleChannels, ModuleWiring, NotificationEvent,
-};
-use common::enums::system::{CoreEvent, Pulse};
+use crate::modules::module_channels::{ChannelType, EventPayload, NotificationEvent};
+
+use common::enums::log::{LogActionEnum, LogLevelEnum};
+use common::enums::system::{CoreEvent, Pulse, SystemModuleEnum};
+
 use std::sync::Arc;
-use tokio::sync::mpsc;
-use tokio::{select, task::JoinHandle}; // antagande: finns
+use tokio::sync::{broadcast, mpsc};
+use tokio::{select, task::JoinHandle};
 
-const DEBUG: bool = true; // sätt per modul
+const DEBUG: bool = true;
 
-/// Commandbus
-///
-///
-/// listens to rocket
-/// Talks to, fetcher and deadletter module
+pub struct IngestorRouter;
 
-pub struct IngestorRoutes;
-
-impl IngestorRoutes {
+impl IngestorRouter {
     pub fn spawn(shared: Arc<SharedResources>) -> JoinHandle<()> {
         tokio::spawn(async move {
-            // Logger, pulses, broadcast
+            // Logger och pulser
             let logger: Arc<Logger> = shared.get_logger();
             let pulses = shared.get_pulse_subscriptions();
-            let mut pulse_rx = pulses.subscribe_medium(); // ~2s i din broadcaster
+            let mut pulse_rx = pulses.subscribe_medium();
 
-            let _core_rx = shared.get_service_channels().subscribe_to_core_event(); // om du vill lyssna på Startup/Shutdown
+            // Core events
+            let mut core_rx: broadcast::Receiver<CoreEvent> = {
+                let chans = shared.get_module_channels();
+                chans.subscribe_to_core_event()
+            };
 
-            // ========== Wiring ===========
-            // Wiring: egen IN
-            let wiring = shared.get_service_wiring();
+            // Wiring IN: Fetcher -> Ingestor
             let mut fetcher_rx: Option<mpsc::UnboundedReceiver<EventPayload>> = {
-                let mut locked = wiring.lock().await;
-                locked.take_rx(ChannelType::FetcherToIngestor);
+                let wiring = shared.get_module_wiring();
+                let mut guard = wiring.lock().await;
+                guard.take_rx(ChannelType::FetcherToIngestor)
             };
 
-            // Wiring: utgående TX till fetcher
-            let to_fetcher_tx: Option<mpsc::UnboundedSender<EventPayload>> = {
-                let locked = wiring.lock().await; // read scope
-                locked.get_tx(ChannelType::IngestorToDbWriter).await
+            // Wiring OUT: Ingestor -> DBWriter
+            let to_dbwriter_tx: Option<mpsc::UnboundedSender<EventPayload>> = {
+                let wiring = shared.get_module_wiring();
+                let guard = wiring.lock().await;
+                guard.get_tx(ChannelType::IngestorToDbWriter)
             };
 
-            // Wiring: utgående TX till deadletter
-            let to_dead_letter_tx: Option<mpsc::UnboundedSender<EventPayload>> = {
-                let locked = wiring.lock().await; // read scope
-                locked.get_tx(ChannelType::IngestorToDeadLetter).await
+            // Wiring OUT: Ingestor -> DeadLetter
+            let to_deadletter_tx: Option<mpsc::UnboundedSender<EventPayload>> = {
+                let wiring = shared.get_module_wiring();
+                let guard = wiring.lock().await;
+                guard.get_tx(ChannelType::IngestorToDeadLetter)
             };
 
+            // Startlogg
             logger
-                .info_mod(
-                    SystemModuleEnum::IngestorRoutes,
-                    LogActionEnum::Custom,
-                    Some("I am active".to_string()),
+                .log_now(
+                    LogLevelEnum::Info,
+                    SystemModuleEnum::IngestorRouter,
+                    LogActionEnum::SystemStartup,
+                    Some("active".to_string()),
                 )
                 .await;
 
+            // Huvudloop
             loop {
                 select! {
-                    // 2s-pulsen
-                    Ok(Pulse::Medium) = pulse_rx.recv() => {
-                        logger.info_mod(
-                            SystemModuleEnum::IngestorRoutes,
-                            LogActionEnum::SystemStartup,
-                            Some("spawned".to_string()),
-                        ).await;
-
-                        if DEBUG {
-                            if let Some(tx) = to_fetcher_tx.clone() {
-                                let _ = tx.send(EventPayload::NotificationEvent(
-                                    NotificationEvent::new("Hej från IngestorRoutes")));
+                    // Livscykel
+                    Ok(ev) = core_rx.recv() => {
+                        match ev {
+                            CoreEvent::Startup => {
+                                logger.debug_mod(SystemModuleEnum::IngestorRouter, "CoreEvent::Startup").await;
                             }
-                            if let Some(tx) = to_dead_letter_tx.clone() {
-                                let _ = tx.send(EventPayload::NotificationEvent(
-                                    NotificationEvent::new("Hej från IngestorRoutes")));
+                            CoreEvent::Restart => {
+                                logger.debug_mod(SystemModuleEnum::IngestorRouter, "CoreEvent::Restart").await;
+                                // Nollställ temporär state här om behövs
+                            }
+                            CoreEvent::Shutdown => {
+                                logger.log_now(
+                                    LogLevelEnum::Info,
+                                    SystemModuleEnum::IngestorRouter,
+                                    LogActionEnum::SystemShutdown,
+                                    Some("draining".to_string()),
+                                ).await;
+
+                                // Dränera inkommande kö
+                                if let Some(rx) = fetcher_rx.as_mut() {
+                                    while let Ok(msg) = rx.try_recv() {
+                                        logger.debug_mod(
+                                            SystemModuleEnum::IngestorRouter,
+                                            format!("drain from Fetcher on shutdown: {:?}", msg)
+                                        ).await;
+
+                                        // Valfritt: skicka allt kvar till DeadLetter
+                                        if let Some(tx) = to_deadletter_tx.as_ref() {
+                                            let _ = tx.send(msg);
+                                        }
+                                    }
+                                }
+
+                                println!("IngestorRouter | Shutdown complete.");
+
+                                break;
                             }
                         }
                     }
 
-                    // valfri mpsc-ingång (kommando från IngestorRoutes, t.ex. "synka nu")
+                    // Puls
+                    Ok(Pulse::Medium) = pulse_rx.recv() => {
+                        logger
+                            .log_now(
+                                LogLevelEnum::Info,
+                                SystemModuleEnum::IngestorRouter,
+                                LogActionEnum::DebugPulse,
+                                Some("tick".to_string()),
+                            )
+                            .await;
+
+                        if DEBUG {
+                            if let Some(tx) = to_dbwriter_tx.clone() {
+                                let _ = tx.send(EventPayload::NotificationEvent(
+                                    NotificationEvent::new("Hej från IngestorRouter till DBWriter")
+                                ));
+                            }
+                            if let Some(tx) = to_deadletter_tx.clone() {
+                                let _ = tx.send(EventPayload::NotificationEvent(
+                                    NotificationEvent::new("Hej från IngestorRouter till DeadLetter")
+                                ));
+                            }
+                        }
+                    }
+
+                    // MPSC-ingång: Fetcher -> Ingestor
                     maybe_msg = async {
-                        if let Some(rx) = my_rx.as_mut() { rx.recv().await } else { None }
+                        if let Some(rx) = fetcher_rx.as_mut() { rx.recv().await } else { None }
                     } => {
                         if let Some(msg) = maybe_msg {
-                            logger.debug("IngestorRoutes", &format!("Received on wiring: {:?}", msg));
+                            logger
+                                .debug_mod(
+                                    SystemModuleEnum::IngestorRouter,
+                                    format!("received on wiring: {:?}", msg),
+                                )
+                                .await;
+
+                            // TODO: matcha på msg och routa
+                            // Exempel:
+                            // match msg {
+                            //     EventPayload::QueryOk(q) => if let Some(tx) = to_dbwriter_tx.as_ref() { let _ = tx.send(EventPayload::from(q)); }
+                            //     EventPayload::QueryErr(e) => if let Some(tx) = to_deadletter_tx.as_ref() { let _ = tx.send(EventPayload::from(e)); }
+                            //     _ => {}
+                            // }
+
+                            logger
+                                .log_now(
+                                    LogLevelEnum::Info,
+                                    SystemModuleEnum::IngestorRouter,
+                                    LogActionEnum::MessageReceived,
+                                    Some("fetcher -> ingestor".to_string()),
+                                )
+                                .await;
                         }
                     }
                 }
             }
+
+            // Avslutningslogg
+            logger
+                .log_now(
+                    LogLevelEnum::Info,
+                    SystemModuleEnum::IngestorRouter,
+                    LogActionEnum::SystemShutdown,
+                    Some("stopped".to_string()),
+                )
+                .await;
         })
     }
 }

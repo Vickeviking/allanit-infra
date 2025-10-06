@@ -14,6 +14,7 @@ services:
     container_name: allanit_infra_redis
 
   core:
+    stop_grace_period: 10s
     build:
       context: ./allanit_infra
       dockerfile: dockerfile
@@ -22,6 +23,9 @@ services:
     environment:
       - DATABASE_URL=postgres://postgres:postgres@postgres:5432/app_db
       - REDIS_URL=redis://redis:6379
+      - RUST_LOG=info
+      - LOG_FILE=/var/log/allanit.ndjson
+      - LOG_SINK=pg #välj "pg" eller "memory"
     depends_on:
       - postgres
       - redis
@@ -30,6 +34,7 @@ services:
       - "5001:5001/udp" # UDP heartbeat
     volumes:
       - ./allanit_infra:/usr/src/allanit_infra
+      - ./allanit_infra/ndjson:/var/log
 
 volumes:
   postgres_data: {}

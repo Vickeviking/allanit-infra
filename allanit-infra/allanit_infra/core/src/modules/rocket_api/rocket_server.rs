@@ -1,6 +1,5 @@
 use crate::core::shared_resources::SharedResources;
-use crate::rocket_api::routes;
-use crate::rocket_api::Cors;
+use crate::modules::rocket_api::{routes, Cors};
 use common::enums::system::CoreEvent;
 use common::rocket::{CacheConn, DbConn};
 use rocket::{routes, Build, Rocket};
@@ -41,7 +40,7 @@ fn index() -> &'static str {
 
 #[allow(clippy::unwrap_used)]
 pub async fn launch_rocket(shared: Arc<SharedResources>) {
-    let mut shutdown_rx = shared.get_service_channels().subscribe_to_core_event();
+    let mut shutdown_rx = shared.get_module_channels().subscribe_to_core_event();
 
     let rocket = build_rocket(Arc::clone(&shared)).await;
 

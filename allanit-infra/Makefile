@@ -2,59 +2,54 @@
 # SwarmSync Makefile 
 ###############################################################################
 
-# Variables
 DC = docker compose
 CORE = core
-
-# Detect this file for help target
 FILE := $(firstword $(MAKEFILE_LIST))
 
 .PHONY: help menu build up-core up-all down \
         migrate db-save db-load db_store docker-clean \
-        run-core  \
+        logs-core \
         test-unit test-integration test-all
-
 
 #### Build & Up/Down ##########################################################
 build: ## Build core
 	@echo "▶ Building images..."
-	$(DC) build $(CORE) $(CONSUMER) $(WORKER)
+	$(DC) build $(CORE)
 
-up-core: ## Start Core service + 
-	@echo "▶ Starting Core"
-	$(DC) up -d $(CORE) 
-up-all: ## Start Core
+up-core: ## Start Core service
+	@echo "▶ Starting Core..."
+	$(DC) up -d $(CORE)
+
+up-all: ## Start all services
 	@echo "▶ Starting all services..."
-	$(DC) up -d $(CORE) 
+	$(DC) up -d
 
-down: ## Stop all SwarmSync containers
+down: ## Stop all containers
 	@echo "▶ Stopping all services..."
-	@$(DC) down
+	$(DC) down
 
-docker-clean: down 
-	@echo "▶ Pruning Docker system…"
-	@docker system prune -af --volumes
+docker-clean: down ## Full prune
+	@echo "▶ Pruning Docker system..."
+	docker system prune -af --volumes
 
 #### Diesel tasks ###############################################################
-migrate: up-core ## 
-	@echo "▶ Applying migrations…"
-	@$(DC) exec -T $(CORE) diesel migration run
+migrate: up-core ## Apply migrations
+	@echo "▶ Applying migrations..."
+	$(DC) exec -T $(CORE) diesel migration run
 
-#### Run targets #############################################################
-run-core: ## Launch core binary
-	$(require_core)
-	@echo "▶ Running Core API…"
-	@$(DC) exec -T $(CORE) cargo run --bin core
+#### Logs ####################################################################
+logs-core: ## Follow Core logs
+	@echo "▶ Attaching to Core logs..."
+	$(DC) logs -f $(CORE)
 
 #### Testing #################################################################
-test-unit: ## Run unit tests in Core, Consumer & Worker
-	@echo "▶ Core unit tests…"
-	@$(DC) exec $(CORE)        cargo test -- --include-ignored
+test-unit: ## Run unit tests
+	@echo "▶ Core unit tests..."
+	$(DC) exec $(CORE) cargo test -- --include-ignored
 
-test-integration: up-all migrate ## Run integration tests for every crate (host-side)
-	$(require_core)
-	@echo "▶ Core integration tests…"
-	@cd allanit_infra/core       && cargo test -- --include-ignored
+test-integration: up-all migrate ## Run integration tests
+	@echo "▶ Core integration tests..."
+	cd allanit_infra/core && cargo test -- --include-ignored
 
 test-all: test-unit test-integration ## Run all tests
 
@@ -80,8 +75,3 @@ menu: help ## Interactive menu
 	             | awk -F ':.*?## ' '{print $$1}'); \
 	      echo "▶ Running $$cmd…"; \
 	      make $$cmd; }
-
-
-
-
-

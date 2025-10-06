@@ -1,4 +1,4 @@
-use crate::rocket_api::server_error;
+use crate::modules::rocket_api::server_error;
 use common::auth::{authorize_user, Credentials};
 use common::database::models::user::User;
 use common::database::repositories::UserRepository;
