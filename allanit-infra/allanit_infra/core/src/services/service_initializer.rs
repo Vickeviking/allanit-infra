@@ -2,7 +2,7 @@
 use std::sync::Arc;
 use thiserror::Error;
 use tokio::signal;
-use tokio::sync::Notify;
+use tokio::sync::{mpsc, Notify};
 use tokio::task::JoinHandle;
 
 use crate::core::shared_resources::SharedResources;
@@ -25,7 +25,7 @@ pub struct ServiceInitializer {
 
 impl ServiceInitializer {
     pub async fn new(
-        _shared_resources: Arc<SharedResources>,
+        shared_resources: Arc<SharedResources>,
         pulse_broadcaster: PulseBroadcaster,
     ) -> Self {
         ServiceInitializer {

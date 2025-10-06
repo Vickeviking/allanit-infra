@@ -49,10 +49,6 @@ pub fn routes() -> Vec<Route> {
 • HEAD    /users/exists/email/:email         → Exists by email                       → 200 OK / 404 Not Found
 • HEAD    /users/exists/username/:username   → Exists by username                    → 200 OK / 404 Not Found
 
-== 🔗 Relational & Aggregation ==
-• GET     /users/with-jobs                   → Users with jobs                       → 200 OK (Vec<User>)
-• GET     /users/job-counts                  → User job counts                       → 200 OK (Vec<(User, i64)>)
-
 ======================================================================== */
 
 // === CRUD ===

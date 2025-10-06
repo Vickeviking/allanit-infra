@@ -30,22 +30,22 @@ impl NotificationEvent {
     }
 }
 
-/// Global service channels for system-wide events.
+/// Global module channels for system-wide events.
 /// - `core_event_tx` broadcasts events to all subscribers.
 /// - `corebridge_to_main_tx` and `corebridge_to_main_rx` form a one-to-one channel.
-#[doc = include_str!("../../../docs/core/services/service_channels.md")]
-pub struct ServiceChannels {
+#[doc = include_str!("../../../docs/core/modules/service_channels.md")]
+pub struct ModuleChannels {
     pub core_event_tx: broadcast::Sender<CoreEvent>,
 }
 
-impl ServiceChannels {
+impl ModuleChannels {
     pub fn new() -> Self {
         let (core_event_tx, _) = broadcast::channel::<CoreEvent>(16);
-        ServiceChannels { core_event_tx }
+        ModuleChannels { core_event_tx }
     }
 
     /// Broadcasts an event to all subscribers.
-    pub async fn send_event_to_all_services(&self, event: CoreEvent) {
+    pub async fn send_event_to_all_modules(&self, event: CoreEvent) {
         let _ = self.core_event_tx.send(event);
     }
 
@@ -55,7 +55,7 @@ impl ServiceChannels {
     }
 }
 
-impl Default for ServiceChannels {
+impl Default for ModuleChannels {
     fn default() -> Self {
         Self::new()
     }
@@ -66,17 +66,17 @@ type ChannelPair = (
     Option<mpsc::UnboundedReceiver<EventPayload>>,
 );
 
-/// ServiceWiring encapsulates the one-to-one communication channels between modules.
+/// ModuleWiring encapsulates the one-to-one communication channels between modules.
 /// This structure manages each channel identified by `ChannelType`.
 //WARNING: Really usefull but sadly not yet implemented, this is how mpsc is used, please read docs
 //in notion
-pub struct ServiceWiring {
+pub struct ModuleWiring {
     inner: RwLock<HashMap<ChannelType, ChannelPair>>,
 }
 
-impl ServiceWiring {
+impl ModuleWiring {
     pub fn new() -> Self {
-        ServiceWiring {
+        ModuleWiring {
             inner: RwLock::new(HashMap::new()),
         }
     }
@@ -144,16 +144,16 @@ impl ServiceWiring {
     }
 }
 
-impl Default for ServiceWiring {
+impl Default for ModuleWiring {
     fn default() -> Self {
         Self::new()
     }
 }
 
-//Perfect example of how to use mpsc with service_channels
+//Perfect example of how to use mpsc with module_channels
 #[tokio::test]
-async fn test_service_wiring() {
-    let wiring = ServiceWiring::new();
+async fn test_module_wiring() {
+    let wiring = ModuleWiring::new();
     let (tx, rx) = mpsc::unbounded_channel::<EventPayload>();
     let chan = ChannelType::CoreBridgeToMainCoreEvents;
 

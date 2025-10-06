@@ -7,7 +7,7 @@ use std::sync::Arc;
 use tokio::runtime::Runtime;
 use tokio::sync::Mutex;
 pub mod core;
-pub mod rocket_api;
+pub mod modules;
 pub mod services;
 pub mod utils;
 
@@ -22,16 +22,26 @@ fn main() {
 }
 
 async fn tokio_async_runtime() -> anyhow::Result<(), anyhow::Error> {
-    // Initialize necessary components
+    // === Init Services ===
     let service_channels = Arc::new(ServiceChannels::new());
     let service_wiring = Arc::new(Mutex::new(ServiceWiring::new()));
     let pulse_broadcaster = PulseBroadcaster::new(service_channels.subscribe_to_core_event());
-    let logger = Arc::new(Logger::new(
-        service_channels.subscribe_to_core_event(),
-        Arc::new(pulse_broadcaster.subscriptions()),
-    ));
+
+    // === Logger and shared_resources ===
+    let logger = Arc::new(
+        Logger::from_env(
+            service_channels.subscribe_to_core_event(),
+            Arc::new(pulse_broadcaster.subscriptions()),
+        )
+        .await,
+    );
+    tokio::spawn({
+        let logger = Arc::clone(&logger);
+        async move { logger.init().await }
+    });
+
     let shared_resources = Arc::new(SharedResources::new(
-        logger,
+        Arc::clone(&logger),
         Arc::new(pulse_broadcaster.subscriptions()),
         Arc::clone(&service_channels),
         service_wiring,
@@ -43,7 +53,7 @@ async fn tokio_async_runtime() -> anyhow::Result<(), anyhow::Error> {
     let shutdown_notify = initializer.shutdown_notify.clone();
     let _ = initializer.start()?;
     // ==== create and start modules ====
-    let service_handles = ModuleInitializer::new(Arc::clone(&shared_resources));
+    let module_handles = ModuleInitializer::new(Arc::clone(&shared)).await;
 
     // Send startup signal to all services
     service_channels
@@ -57,7 +67,7 @@ async fn tokio_async_runtime() -> anyhow::Result<(), anyhow::Error> {
     service_channels
         .send_event_to_all_services(CoreEvent::Shutdown)
         .await;
-    service_handles.join_tasks().await;
+    module_handles.join_tasks().await;
     println!("Shutdown complete.");
 
     Ok(())
