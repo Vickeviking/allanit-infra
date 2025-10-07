@@ -2,7 +2,7 @@
 FROM rust:latest AS dev
 
 # ---- 1. workspace root ----------------------------------------------------
-WORKDIR /app
+WORKDIR /app/core
 
 # Copy manifests first → better layer‑cache
 COPY Cargo.toml Cargo.lock ./

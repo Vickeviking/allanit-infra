@@ -17,8 +17,8 @@ uuid           = { version = "1.16.0", features = ["v4"] }
 rand           = "0.8"
 
 # DB stack (shared defaults)
-diesel         = { version = "2.1",  features = ["postgres", "chrono"] }
-diesel-async   = { version = "0.4",  features = ["postgres"] }
+diesel         = { version = "2.1",  features = ["postgres", "chrono", "serde_json"] }
+diesel-async   = { version = "0.4",  features = ["postgres", "bb8"] }
 
 # Crypto
 argon2         = { version = "0.4", default-features = false, features = ["std"] }

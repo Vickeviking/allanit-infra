@@ -8,6 +8,8 @@ services:
       - POSTGRES_DB=app_db
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432" # Postgres for pgcli och dbeaver
 
   redis:
     image: redis:7-alpine
@@ -26,12 +28,16 @@ services:
       - RUST_LOG=info
       - LOG_FILE=/var/log/allanit.ndjson
       - LOG_SINK=pg #välj "pg" eller "memory"
+      - SEVENTIME_BASE_URL=http://localhost:4000
+      - SEVENTIME_CLIENT_SECRET=dev-secret
+      - SEVENTIME_TIMEOUT_MS=5000
+      - FETCH_MIN_INTERVAL_MS=5000
     depends_on:
       - postgres
       - redis
     ports:
       - "8000:8000" # HTTP
-      - "5001:5001/udp" # UDP heartbeat
+
     volumes:
       - ./allanit_infra:/usr/src/allanit_infra
       - ./allanit_infra/ndjson:/var/log

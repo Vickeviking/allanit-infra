@@ -1,21 +1,33 @@
-///! Shared resources between modules,
-///! Logger - used by all modules, to log internal events, no mutex needed, have internal mutexes
-///! Pulse subscriptions - used by all modules to subscribe to pulses, no mutex needed
-///! Module channels - broadcast channels for one-to-many communication, subscribe to core event
-///! Module wiring - one-to-one communication channels between modules,
-///!                  each module take() its channel sides upon initialization
+//! SharedResources
+//! ---------------
+//! Purpose: Central handle bundle passed to every module.
+//!
+//! Contains
+//! - Logger
+//! - PulseSubscriptions
+//! - ModuleChannels (broadcast)
+//! - ModuleWiring (mpsc pipes)
+//! - DB pool (bb8 + diesel_async)
+//!
+//! Notes
+//! - Use `db_pool().get().await` for runtime modules (preferred).
+//! - `db_conn().await` wraps your existing one-off constructor for ad hoc use.
+
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use crate::modules::{Logger, ModuleChannels, ModuleWiring};
 use crate::services::PulseSubscriptions;
 
-/// All systemwide shared resources
+use diesel_async::pooled_connection::bb8::Pool;
+use diesel_async::AsyncPgConnection;
+
 pub struct SharedResources {
-    pub logger: Arc<Logger>,
-    pub pulse_subscriptions: Arc<PulseSubscriptions>,
-    pub module_channels: Arc<ModuleChannels>, //only has ref ones so only Arc
-    pub module_wiring: Arc<Mutex<ModuleWiring>>, // builds on take() so needs write = MutexLock
+    logger: Arc<Logger>,
+    pulse_subscriptions: Arc<PulseSubscriptions>,
+    module_channels: Arc<ModuleChannels>,
+    module_wiring: Arc<Mutex<ModuleWiring>>,
+    db_pool: Pool<AsyncPgConnection>,
 }
 
 impl SharedResources {
@@ -24,30 +36,36 @@ impl SharedResources {
         pulse_subscriptions: Arc<PulseSubscriptions>,
         module_channels: Arc<ModuleChannels>,
         module_wiring: Arc<Mutex<ModuleWiring>>,
+        db_pool: Pool<AsyncPgConnection>,
     ) -> Self {
-        SharedResources {
+        Self {
             logger,
             pulse_subscriptions,
             module_channels,
             module_wiring,
+            db_pool,
         }
     }
 
-    // getters
     pub fn get_logger(&self) -> Arc<Logger> {
         Arc::clone(&self.logger)
     }
-
     pub fn get_pulse_subscriptions(&self) -> Arc<PulseSubscriptions> {
         Arc::clone(&self.pulse_subscriptions)
     }
-
     pub fn get_module_channels(&self) -> Arc<ModuleChannels> {
         Arc::clone(&self.module_channels)
     }
-
     pub fn get_module_wiring(&self) -> Arc<Mutex<ModuleWiring>> {
-        //we dont lock, they lock we minimize cruitical section
         Arc::clone(&self.module_wiring)
+    }
+
+    pub fn db_pool(&self) -> Pool<AsyncPgConnection> {
+        self.db_pool.clone()
+    }
+
+    // Keep this if you also support an ad hoc non pooled connection path
+    pub async fn db_conn(&self) -> anyhow::Result<AsyncPgConnection> {
+        common::commands::load_db_connection().await
     }
 }

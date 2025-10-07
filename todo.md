@@ -1,5 +1,28 @@
 # Fill out change log
 
+Migrations först: lägg upp.sql och down.sql för customers, purchase_orders,
+emails_inbound, invoices_raw samt system_logs. Använd Diesels migrations och håll dem reversibla.
+
+Generera schema.rs, sedan modeller: Customer, PurchaseOrder, EmailInbound, InvoiceRaw.
+Deriva Queryable och Insertable.
+
+Repositories per tabell: bygg små, testbara metoder med
+diesel_async::AsyncPgConnection för find, upsert och list.
+
+Pipelinekontrakt: i EventPayload definiera
+UpsertCustomers(Vec<Customer>) och UpsertPurchaseOrders(Vec<PurchaseOrder>).
+Ingestor gör validering och dedup på external_id. DBWriter kör batch upsert i transaktion.
+
+Concurrency: använd tokio::select!
+över broadcast för CoreEvent och mpsc för wiring. Håll tydliga gränser per kanal.
+
+Rocket integration: request guards för auth
+som i ditt exempel och managed state för pooler.
+
+Testflöde: kör migrations i test, seed 2 kunder och 2 orders,
+trigga Fetcher till Ingestor till DBWriter och asserta rader i DB.
+(Se även våra mock-endpoints för Customers och PurchaseOrders som referens.)
+
 - Add models to database for seventimes, relook into their API
 - Add query loogic for it
 - fetch moduel now needs to continuosly try to speak with seventimes mock upon pulse

@@ -1,60 +1,46 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
-    job_assignments (id) {
-        id -> Int4,
-        job_id -> Int4,
-        worker_id -> Int4,
-        assigned_at -> Timestamp,
-        started_at -> Nullable<Timestamp>,
-        finished_at -> Nullable<Timestamp>,
+    customers (id) {
+        id -> Int8,
+        external_id -> Text,
+        name -> Text,
+        email -> Nullable<Text>,
+        phone -> Nullable<Text>,
+        org_no -> Nullable<Text>,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
     }
 }
 
 diesel::table! {
-    job_metrics (id) {
-        id -> Int4,
-        job_id -> Int4,
-        worker_id -> Int4,
-        duration_sec -> Nullable<Int4>,
-        cpu_usage_pct -> Nullable<Float4>,
-        mem_usage_mb -> Nullable<Float4>,
-        exit_code -> Nullable<Int4>,
-        timestamp -> Timestamp,
+    emails_inbound (id) {
+        id -> Int8,
+        message_id -> Text,
+        from_addr -> Text,
+        to_addr -> Array<Nullable<Text>>,
+        subject -> Nullable<Text>,
+        received_at -> Timestamptz,
+        raw_source -> Nullable<Text>,
+        parsed -> Nullable<Jsonb>,
+        status -> Text,
+        created_at -> Timestamptz,
     }
 }
 
 diesel::table! {
-    job_results (id) {
-        id -> Int4,
-        job_id -> Int4,
-        stdout -> Nullable<Text>,
-        files -> Nullable<Array<Nullable<Text>>>,
-        saved_at -> Timestamp,
-    }
-}
-
-diesel::table! {
-    jobs (id) {
-        id -> Int4,
-        user_id -> Int4,
-        job_name -> Text,
-        image_url -> Text,
-        #[max_length = 64]
-        image_format -> Varchar,
-        docker_flags -> Nullable<Array<Nullable<Text>>>,
-        #[max_length = 64]
-        output_type -> Varchar,
-        output_paths -> Nullable<Array<Nullable<Text>>>,
-        #[max_length = 64]
-        schedule_type -> Varchar,
-        cron_expression -> Nullable<Text>,
-        notes -> Nullable<Text>,
-        #[max_length = 64]
-        state -> Varchar,
-        error_message -> Nullable<Text>,
-        created_at -> Timestamp,
-        updated_at -> Timestamp,
+    invoices_raw (id) {
+        id -> Int8,
+        source_system -> Text,
+        external_id -> Nullable<Text>,
+        customer_external_id -> Nullable<Text>,
+        email_id -> Nullable<Int8>,
+        payload -> Jsonb,
+        file_uri -> Nullable<Text>,
+        ocr_text -> Nullable<Text>,
+        status -> Text,
+        received_at -> Timestamptz,
+        created_at -> Timestamptz,
     }
 }
 
@@ -62,23 +48,36 @@ diesel::table! {
     logs (id) {
         id -> Int4,
         created_at -> Timestamp,
-        #[max_length = 64]
-        level -> Varchar,
-        #[max_length = 64]
-        module -> Varchar,
-        #[max_length = 64]
-        action -> Varchar,
         expires_at -> Timestamp,
-        client_connected_ip -> Nullable<Text>,
-        client_connected_username -> Nullable<Text>,
-        job_submitted_job_id -> Nullable<Int4>,
-        #[max_length = 64]
-        job_submitted_from_module -> Nullable<Varchar>,
-        #[max_length = 64]
-        job_submitted_to_module -> Nullable<Varchar>,
-        job_completed_job_id -> Nullable<Int4>,
-        job_completed_success -> Nullable<Bool>,
+        level -> Varchar,
+        module -> Varchar,
+        action -> Varchar,
         custom_msg -> Nullable<Text>,
+    }
+}
+
+diesel::table! {
+    purchase_orders (id) {
+        id -> Int8,
+        external_id -> Text,
+        customer_id -> Nullable<Int8>,
+        status -> Text,
+        description -> Nullable<Text>,
+        amount -> Float8,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    system_logs (id) {
+        id -> Int8,
+        ts -> Timestamptz,
+        module -> Text,
+        level -> Text,
+        action -> Text,
+        message -> Nullable<Text>,
+        meta -> Nullable<Jsonb>,
     }
 }
 
@@ -92,57 +91,15 @@ diesel::table! {
     }
 }
 
-diesel::table! {
-    worker_status (id) {
-        id -> Int4,
-        worker_id -> Int4,
-        #[max_length = 64]
-        status -> Varchar,
-        last_heartbeat -> Nullable<Timestamp>,
-        active_job_id -> Nullable<Int4>,
-        uptime_sec -> Nullable<Int4>,
-        load_avg -> Nullable<Array<Nullable<Float4>>>,
-        last_error -> Nullable<Text>,
-        updated_at -> Timestamp,
-    }
-}
-
-diesel::table! {
-    workers (id) {
-        id -> Int4,
-        user_id -> Int4,
-        label -> Text,
-        ip_address -> Text,
-        hostname -> Text,
-        ssh_user -> Text,
-        ssh_key -> Text,
-        docker_version -> Text,
-        arch -> Text,
-        #[max_length = 64]
-        os -> Varchar,
-        tags -> Nullable<Array<Nullable<Text>>>,
-        created_at -> Timestamp,
-        last_seen_at -> Nullable<Timestamp>,
-    }
-}
-
-diesel::joinable!(job_assignments -> jobs (job_id));
-diesel::joinable!(job_assignments -> workers (worker_id));
-diesel::joinable!(job_metrics -> jobs (job_id));
-diesel::joinable!(job_metrics -> workers (worker_id));
-diesel::joinable!(job_results -> jobs (job_id));
-diesel::joinable!(jobs -> users (user_id));
-diesel::joinable!(worker_status -> jobs (active_job_id));
-diesel::joinable!(worker_status -> workers (worker_id));
-diesel::joinable!(workers -> users (user_id));
+diesel::joinable!(invoices_raw -> emails_inbound (email_id));
+diesel::joinable!(purchase_orders -> customers (customer_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
-    job_assignments,
-    job_metrics,
-    job_results,
-    jobs,
+    customers,
+    emails_inbound,
+    invoices_raw,
     logs,
+    purchase_orders,
+    system_logs,
     users,
-    worker_status,
-    workers,
 );

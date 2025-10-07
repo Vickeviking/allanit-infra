@@ -27,6 +27,7 @@ rand            = { workspace = true }
 diesel          = { workspace = true }  
 diesel-async    = { workspace = true }
 argon2       = { workspace = true , default-features = false, features = ["std"] }
+reqwest = { version = "0.12", features = ["json", "gzip", "stream", "rustls-tls", "blocking"] }
 
 # ------- Rocket specific ------------
 rocket = { version = "0.5", features = ["json"] }
@@ -34,6 +35,5 @@ rocket_db_pools = { version = "0.1", features = ["diesel_postgres", "deadpool_re
 
 # ───── Dev‑only ------------------------------------------------------------
 [dev-dependencies]
-reqwest         = { version = "0.11", features = ["json", "blocking"] }
 tokio           = { workspace = true }
 uuid            = { workspace = true }

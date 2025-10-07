@@ -1,3 +1,4 @@
+use common::database::models::{customer::NewCustomer, purchase_order::NewPurchaseOrder};
 use common::enums::system::CoreEvent;
 use std::collections::HashMap;
 use tokio::sync::{broadcast, mpsc, RwLock};
@@ -20,6 +21,9 @@ pub enum EventPayload {
     NotificationEvent(NotificationEvent),
 
     // domän:
+    UpsertCustomers(Vec<NewCustomer>),
+    UpsertPurchaseOrders(Vec<NewPurchaseOrder>),
+
     IngestAck,
     DbAck,
     ReprocessRequest { count: usize },
