@@ -1,4 +1,7 @@
-version: "3.9"
+networks:
+  appnet:
+    external: true
+
 services:
   db:
     image: postgres:16
@@ -17,6 +20,7 @@ services:
       interval: 2s
       timeout: 2s
       retries: 30
+    networks: [appnet]
 
   seventimes-mock:
     build:
@@ -30,6 +34,7 @@ services:
         condition: service_healthy
     ports:
       - "4000:4000"
+    networks: [appnet]
 
 volumes:
   dbdata:

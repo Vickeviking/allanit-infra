@@ -258,8 +258,8 @@ async fn fetch_and_emit(
     let tx_customers = tx_opt.clone();
     let tx_orders = tx_opt;
 
-    // Kör parallellt
-    let (cust_res, order_res) = future::join(
+    // Kör parallellt (utan short-circuit)
+    let (cust_res, order_res) = tokio::join!(
         async {
             logger
                 .debug_mod(
@@ -267,14 +267,16 @@ async fn fetch_and_emit(
                     "attempt fetch customers",
                 )
                 .await;
+
             let customers = fetch_customers(http, cfg)
                 .await
                 .context("fetch_customers")?;
+
             logger
                 .log_now(
                     LogLevelEnum::Info,
                     SystemModuleEnum::SeventimeFetcher,
-                    LogActionEnum::ApiResponseOk,
+                    LogActionEnum::ApiRequest,
                     Some(format!("fetched customers {}", customers.len())),
                 )
                 .await;
@@ -296,13 +298,14 @@ async fn fetch_and_emit(
                     format!("emit customers {}", batch.len()),
                 )
                 .await;
+
             if let Some(tx) = tx_customers {
                 let _ = tx.send(EventPayload::UpsertCustomers(batch));
                 logger
                     .log_now(
                         LogLevelEnum::Info,
                         SystemModuleEnum::SeventimeFetcher,
-                        LogActionEnum::MessageSent,
+                        LogActionEnum::DebugPipeMessage,
                         Some("customers batch sent".to_string()),
                     )
                     .await;
@@ -313,12 +316,14 @@ async fn fetch_and_emit(
             logger
                 .debug_mod(SystemModuleEnum::SeventimeFetcher, "attempt fetch orders")
                 .await;
+
             let pos = fetch_pos(http, cfg).await.context("fetch_pos")?;
+
             logger
                 .log_now(
                     LogLevelEnum::Info,
                     SystemModuleEnum::SeventimeFetcher,
-                    LogActionEnum::ApiResponseOk,
+                    LogActionEnum::ApiRequest,
                     Some(format!("fetched orders {}", pos.len())),
                 )
                 .await;
@@ -340,21 +345,21 @@ async fn fetch_and_emit(
                     format!("emit orders {}", batch.len()),
                 )
                 .await;
+
             if let Some(tx) = tx_orders {
                 let _ = tx.send(EventPayload::UpsertPurchaseOrders(batch));
                 logger
                     .log_now(
                         LogLevelEnum::Info,
                         SystemModuleEnum::SeventimeFetcher,
-                        LogActionEnum::MessageSent,
+                        LogActionEnum::DebugPipeMessage,
                         Some("orders batch sent".to_string()),
                     )
                     .await;
             }
             anyhow::Ok(())
-        },
-    )
-    .await;
+        }
+    );
 
     if let Err(e) = cust_res {
         logger
@@ -379,6 +384,7 @@ async fn fetch_and_emit(
 
     Ok(())
 }
+
 #[derive(serde::Deserialize)]
 struct CustomerDTO {
     external_id: String,
