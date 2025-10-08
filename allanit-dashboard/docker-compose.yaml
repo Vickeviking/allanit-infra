@@ -1,0 +1,14 @@
+networks:
+  appnet:
+    external: true
+
+services:
+  dashboard:
+    build: .
+    image: allanit/dashboard:dev
+    container_name: allanit-dashboard
+    environment:
+      - VITE_API_URL=${VITE_API_URL:-http://allanit_infra_core:8000}
+    ports:
+      - "5173:80" # nginx i prod, serverar builden
+    networks: [appnet]

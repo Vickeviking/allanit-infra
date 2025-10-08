@@ -1,0 +1,286 @@
+<template>
+  <div class="space-y-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">Medarbetare</h1>
+        <p class="text-gray-600">Hantera medarbetare och deras journaler</p>
+      </div>
+      <div class="flex items-center space-x-3">
+        <button
+          @click="console.log('Add employee')"
+          class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700"
+        >
+          Lägg till medarbetare
+        </button>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+      <div
+        v-for="i in 3"
+        :key="i"
+        class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 animate-pulse"
+      >
+        <div class="flex items-center space-x-4 mb-4">
+          <div class="w-16 h-16 bg-gray-300 rounded-full"></div>
+          <div class="flex-1">
+            <div class="h-4 bg-gray-300 rounded w-1/3 mb-2"></div>
+            <div class="h-3 bg-gray-300 rounded w-1/4 mb-1"></div>
+            <div class="h-3 bg-gray-300 rounded w-1/5"></div>
+          </div>
+        </div>
+        <div class="space-y-2">
+          <div class="h-3 bg-gray-300 rounded w-1/2"></div>
+          <div class="h-3 bg-gray-300 rounded w-1/3"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Employee Cards Grid -->
+    <div v-else class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+      <div
+        v-for="employee in employees"
+        :key="employee.id"
+        class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-lg hover:border-blue-300 transition-all duration-200"
+      >
+        <!-- Employee Info -->
+        <div class="flex items-center space-x-4 mb-4">
+          <div class="relative">
+            <img
+              :src="employee.image"
+              :alt="employee.name"
+              class="w-16 h-16 rounded-full object-cover border-2 border-gray-200"
+              @error="handleImageError"
+            />
+            <div
+              class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-white shadow-sm"
+              :class="getStatusColor(employee.status)"
+            ></div>
+          </div>
+          <div class="flex-1 min-w-0">
+            <h3 class="text-lg font-semibold text-gray-900 truncate">{{ employee.name }}</h3>
+            <p class="text-sm text-gray-600">{{ employee.role }}</p>
+            <p class="text-xs text-gray-500 truncate">{{ employee.subsidiary }}</p>
+          </div>
+        </div>
+        
+        <!-- Contact Info -->
+        <div class="space-y-2 mb-4">
+          <div class="flex items-center space-x-2">
+            <EnvelopeIcon class="w-4 h-4 text-gray-400 flex-shrink-0" />
+            <span class="text-sm text-gray-600 truncate">{{ employee.email }}</span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <PhoneIcon class="w-4 h-4 text-gray-400 flex-shrink-0" />
+            <span class="text-sm text-gray-600">{{ employee.phone }}</span>
+          </div>
+        </div>
+
+        <!-- Journals Section -->
+        <section class="mt-4">
+          <h3 class="text-sm font-medium text-gray-900 mb-3">Journaler</h3>
+          <template v-if="(ej = getEmployeeJournals(employee.id)) && ej.length">
+            <div class="grid grid-cols-3 gap-2">
+              <JournalCard 
+                v-for="j in ej" 
+                :key="j.id" 
+                :journal="j" 
+                @click="selectJournal" 
+              />
+            </div>
+          </template>
+          <p v-else class="text-xs text-gray-500 py-2 text-center">Inga journaler ännu.</p>
+        </section>
+
+        <!-- Action Button -->
+        <div class="pt-4 border-t border-gray-100 mt-4">
+          <button
+            @click="selectEmployee(employee)"
+            class="w-full px-3 py-2 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 transition-colors"
+          >
+            Visa detaljer
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Journal Detail Drawer -->
+    <div
+      v-if="selectedJournal"
+      class="fixed inset-0 z-50 overflow-hidden"
+    >
+      <div class="absolute inset-0 bg-gray-500 bg-opacity-75" @click="closeJournalDetail"></div>
+      <div class="absolute right-0 top-0 h-full w-96 bg-white shadow-xl">
+        <div class="h-full flex flex-col">
+          <!-- Header -->
+          <div class="px-6 py-4 border-b border-gray-200">
+            <div class="flex items-center justify-between">
+              <h3 class="text-lg font-semibold text-gray-900">{{ selectedJournal.title }}</h3>
+              <button
+                @click="closeJournalDetail"
+                class="text-gray-400 hover:text-gray-600"
+              >
+                <XMarkIcon class="w-6 h-6" />
+              </button>
+            </div>
+          </div>
+
+          <!-- Content -->
+          <div class="flex-1 overflow-y-auto p-6">
+            <div class="space-y-4">
+              <div>
+                <h4 class="text-sm font-medium text-gray-900 mb-2">Innehåll</h4>
+                <p class="text-sm text-gray-700 leading-relaxed">{{ selectedJournal.body }}</p>
+              </div>
+
+              <div class="pt-4 border-t border-gray-200">
+                <h4 class="text-sm font-medium text-gray-900 mb-2">Metadata</h4>
+                <div class="space-y-2 text-sm text-gray-600">
+                  <div class="flex justify-between">
+                    <span>Författare:</span>
+                    <span>{{ selectedJournal.author }}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span>Skapad:</span>
+                    <span>{{ formatDate(selectedJournal.createdAt) }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="px-6 py-4 border-t border-gray-200">
+            <div class="flex space-x-3">
+              <button
+                @click="editJournal"
+                class="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Redigera
+              </button>
+              <button
+                @click="closeJournalDetail"
+                class="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700"
+              >
+                Stäng
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+import { 
+  EnvelopeIcon, 
+  PhoneIcon, 
+  XMarkIcon 
+} from '@heroicons/vue/24/outline'
+import { http } from '@/api/mockClient'
+import { fetchJournals } from '@/api/journals'
+import type { Journal } from '@/mock/journals'
+import JournalCard from '@/components/ui/JournalCard.vue'
+
+const employees = ref<any[]>([])
+const journals = ref<Journal[]>([])
+const selectedEmployee = ref<any>(null)
+const selectedJournal = ref<Journal | null>(null)
+const loading = ref(true)
+let ej: Journal[] // For template optimization
+
+// Group journals by employee ID for O(1) lookup
+const journalsByEmployee = computed(() => {
+  const map = new Map<string, Journal[]>()
+  for (const journal of journals.value) {
+    const arr = map.get(journal.employeeId) ?? []
+    arr.push(journal)
+    map.set(journal.employeeId, arr)
+  }
+  return map
+})
+
+async function loadData() {
+  try {
+    const [employeesRes, journalsData] = await Promise.all([
+      http.get('/api/employees'),
+      fetchJournals()
+    ])
+    
+    employees.value = employeesRes.data.results
+    journals.value = journalsData
+  } catch (error) {
+    console.error('Error loading data:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+function getEmployeeJournals(employeeId: number): Journal[] {
+  return journalsByEmployee.value.get(employeeId.toString()) ?? []
+}
+
+function selectEmployee(employee: any) {
+  selectedEmployee.value = employee
+}
+
+function closeEmployeeDetail() {
+  selectedEmployee.value = null
+}
+
+function selectJournal(journal: Journal) {
+  selectedJournal.value = journal
+}
+
+function closeJournalDetail() {
+  selectedJournal.value = null
+}
+
+function editJournal() {
+  console.log('Edit journal:', selectedJournal.value)
+}
+
+function getStatusColor(status: string): string {
+  const colors = {
+    active: 'bg-green-500',
+    inactive: 'bg-gray-500',
+    on_leave: 'bg-yellow-500'
+  }
+  return colors[status as keyof typeof colors] || 'bg-gray-500'
+}
+
+function formatDate(dateString: string): string {
+  return new Date(dateString).toLocaleDateString('sv-SE')
+}
+
+function handleImageError(event: Event) {
+  const img = event.target as HTMLImageElement
+  img.src = '/src/resources/medarbetare/default.jpg'
+}
+
+onMounted(() => {
+  loadData()
+})
+</script>
+
+<style scoped>
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-clamp: 3;
+}
+
+/* Ensure all employee images have consistent size */
+img[alt*="Tobias"], img[alt*="Alfons"], img[alt*="Janus"], img[alt*="Johan"] {
+  width: 4rem !important;
+  height: 4rem !important;
+  object-fit: cover !important;
+  border-radius: 50% !important;
+}
+</style>
