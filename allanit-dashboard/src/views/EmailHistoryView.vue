@@ -26,7 +26,9 @@
       </div>
       <div class="bg-white rounded-lg shadow-sm border p-6">
         <div class="text-center">
-          <div class="text-2xl font-bold text-gray-900">{{ totalDelivered }}</div>
+          <div class="text-2xl font-bold text-gray-900">
+            {{ totalDelivered }}
+          </div>
           <div class="text-sm text-gray-500">Levererade</div>
         </div>
       </div>
@@ -47,29 +49,43 @@
     <!-- Email History Table -->
     <div class="bg-white rounded-lg shadow-sm border">
       <div class="px-6 py-4 border-b border-gray-200">
-        <h3 class="text-lg font-medium text-gray-900">Skickade e-postutskick</h3>
+        <h3 class="text-lg font-medium text-gray-900">
+          Skickade e-postutskick
+        </h3>
       </div>
-      
+
       <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200">
           <thead class="bg-gray-50">
             <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
                 Kampanj
               </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
                 Mall
               </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
                 Mottagare
               </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
                 Levererade
               </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
                 Öppnade
               </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th
+                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
                 Skickad
               </th>
             </tr>
@@ -80,7 +96,9 @@
               :key="email.id"
               class="hover:bg-gray-50"
             >
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+              <td
+                class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"
+              >
                 {{ email.campaign_name }}
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -107,46 +125,46 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { http } from '@/api/mockClient'
+import { ref, computed, onMounted } from "vue";
+import { http } from "@/api/mockClient";
 
-const sentEmails = ref<any[]>([])
+const sentEmails = ref<any[]>([]);
 
-const totalSent = computed(() => 
-  sentEmails.value.reduce((sum, email) => sum + email.recipient_count, 0)
-)
+const totalSent = computed(() =>
+  sentEmails.value.reduce((sum, email) => sum + email.recipient_count, 0),
+);
 
-const totalDelivered = computed(() => 
-  sentEmails.value.reduce((sum, email) => sum + email.delivered_count, 0)
-)
+const totalDelivered = computed(() =>
+  sentEmails.value.reduce((sum, email) => sum + email.delivered_count, 0),
+);
 
-const totalOpened = computed(() => 
-  sentEmails.value.reduce((sum, email) => sum + email.opened_count, 0)
-)
+const totalOpened = computed(() =>
+  sentEmails.value.reduce((sum, email) => sum + email.opened_count, 0),
+);
 
 const openRate = computed(() => {
-  if (totalDelivered.value === 0) return 0
-  return Math.round((totalOpened.value / totalDelivered.value) * 100)
-})
+  if (totalDelivered.value === 0) return 0;
+  return Math.round((totalOpened.value / totalDelivered.value) * 100);
+});
 
 async function loadData() {
   try {
-    const emailsRes = await http.get('/api/sent-emails')
-    sentEmails.value = emailsRes.data.results
+    const emailsRes = await http.get("/api/sent-emails");
+    sentEmails.value = emailsRes.data.results;
   } catch (error) {
-    console.error('Error loading data:', error)
+    console.error("Error loading data:", error);
   }
 }
 
 function refreshData() {
-  loadData()
+  loadData();
 }
 
 function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString('sv-SE')
+  return new Date(dateString).toLocaleDateString("sv-SE");
 }
 
 onMounted(() => {
-  loadData()
-})
+  loadData();
+});
 </script>

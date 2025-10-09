@@ -7,8 +7,8 @@
         <p v-if="subtitle" class="text-xs text-gray-500 mt-1">{{ subtitle }}</p>
       </div>
       <div class="flex-shrink-0">
-        <div class="w-8 h-8 rounded-full flex items-center justify-center" :class="iconBgClass">
-          <component :is="icon" class="w-4 h-4" :class="iconClass" />
+        <div class="w-8 h-8 rounded-full flex items-center justify-center p-1" :class="iconBgClass">
+          <component :is="icon" class="w-4 h-4" :class="iconClass" style="margin-top: 2px;" />
         </div>
       </div>
     </div>

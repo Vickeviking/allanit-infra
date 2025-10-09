@@ -16,20 +16,25 @@
     </div>
 
     <!-- Filters -->
-    <div v-if="showFilters" class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+    <div v-if="showFilters" class="px-6 py-4 border-b border-gray-200">
       <slot name="filters" />
     </div>
 
     <!-- Table -->
     <div class="overflow-x-auto">
       <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
+        <thead class="bg-white border-b-2 border-gray-300">
           <tr>
             <th v-if="selectable" class="w-12 px-6 py-3 text-left">
               <input
                 type="checkbox"
                 :checked="allSelected"
-                @change="$emit('select-all', ($event.target as HTMLInputElement).checked)"
+                @change="
+                  $emit(
+                    'select-all',
+                    ($event.target as HTMLInputElement).checked,
+                  )
+                "
                 class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
             </th>
@@ -43,7 +48,11 @@
                 <span>{{ column.label }}</span>
                 <component
                   v-if="column.sortable && sortBy === column.key"
-                  :is="sortDirection === 'asc' ? 'ChevronUpIcon' : 'ChevronDownIcon'"
+                  :is="
+                    sortDirection === 'asc'
+                      ? 'ChevronUpIcon'
+                      : 'ChevronDownIcon'
+                  "
                   class="w-4 h-4"
                 />
               </div>
@@ -61,7 +70,13 @@
               <input
                 type="checkbox"
                 :checked="isSelected(item)"
-                @change.stop="$emit('select-item', item, ($event.target as HTMLInputElement).checked)"
+                @change.stop="
+                  $emit(
+                    'select-item',
+                    item,
+                    ($event.target as HTMLInputElement).checked,
+                  )
+                "
                 class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
             </td>
@@ -103,7 +118,10 @@
     </div>
 
     <!-- Pagination -->
-    <div v-if="showPagination && totalPages > 1" class="px-6 py-4 border-t border-gray-200">
+    <div
+      v-if="showPagination && totalPages > 1"
+      class="px-6 py-4 border-t border-gray-200"
+    >
       <div class="flex items-center justify-between">
         <div class="text-sm text-gray-700">
           Visar {{ startItem }}-{{ endItem }} av {{ totalItems }} poster
@@ -133,34 +151,34 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { ChevronUpIcon, ChevronDownIcon } from '@heroicons/vue/24/outline'
+import { computed } from "vue";
+import { ChevronUpIcon, ChevronDownIcon } from "@heroicons/vue/24/outline";
 
 interface Column {
-  key: string
-  label: string
-  sortable?: boolean
-  formatter?: (value: any) => string
+  key: string;
+  label: string;
+  sortable?: boolean;
+  formatter?: (value: any) => string;
 }
 
 interface Props {
-  title: string
-  items: any[]
-  columns: Column[]
-  loading?: boolean
-  selectable?: boolean
-  selectedItems?: any[]
-  showFilters?: boolean
-  showPagination?: boolean
-  currentPage?: number
-  totalPages?: number
-  totalItems?: number
-  sortBy?: string
-  sortDirection?: 'asc' | 'desc'
-  emptyTitle?: string
-  emptyMessage?: string
-  emptyIcon?: any
-  getItemKey?: (item: any, index: number) => string | number
+  title: string;
+  items: any[];
+  columns: Column[];
+  loading?: boolean;
+  selectable?: boolean;
+  selectedItems?: any[];
+  showFilters?: boolean;
+  showPagination?: boolean;
+  currentPage?: number;
+  totalPages?: number;
+  totalItems?: number;
+  sortBy?: string;
+  sortDirection?: "asc" | "desc";
+  emptyTitle?: string;
+  emptyMessage?: string;
+  emptyIcon?: any;
+  getItemKey?: (item: any, index: number) => string | number;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -172,47 +190,53 @@ const props = withDefaults(defineProps<Props>(), {
   currentPage: 1,
   totalPages: 1,
   totalItems: 0,
-  sortBy: '',
-  sortDirection: 'asc',
-  emptyTitle: 'Inga poster',
-  emptyMessage: 'Det finns inga poster att visa.',
-  emptyIcon: 'div',
-  getItemKey: (item: any, index: number) => item.id || index
-})
+  sortBy: "",
+  sortDirection: "asc",
+  emptyTitle: "Inga poster",
+  emptyMessage: "Det finns inga poster att visa.",
+  emptyIcon: "div",
+  getItemKey: (item: any, index: number) => item.id || index,
+});
 
 defineEmits<{
-  'select-all': [checked: boolean]
-  'select-item': [item: any, checked: boolean]
-  'row-click': [item: any]
-  'sort': [key: string]
-  'page-change': [page: number]
-}>()
+  "select-all": [checked: boolean];
+  "select-item": [item: any, checked: boolean];
+  "row-click": [item: any];
+  sort: [key: string];
+  "page-change": [page: number];
+}>();
 
-const selectedCount = computed(() => props.selectedItems?.length || 0)
-const allSelected = computed(() => 
-  props.items.length > 0 && props.selectedItems?.length === props.items.length
-)
+const selectedCount = computed(() => props.selectedItems?.length || 0);
+const allSelected = computed(
+  () =>
+    props.items.length > 0 &&
+    props.selectedItems?.length === props.items.length,
+);
 
-const startItem = computed(() => (props.currentPage - 1) * 10 + 1)
-const endItem = computed(() => Math.min(props.currentPage * 10, props.totalItems))
+const startItem = computed(() => (props.currentPage - 1) * 10 + 1);
+const endItem = computed(() =>
+  Math.min(props.currentPage * 10, props.totalItems),
+);
 
 function getNestedValue(obj: any, path: string) {
-  return path.split('.').reduce((current, key) => current?.[key], obj)
+  return path.split(".").reduce((current, key) => current?.[key], obj);
 }
 
 function formatValue(value: any, column: Column) {
   if (column.formatter) {
-    return column.formatter(value)
+    return column.formatter(value);
   }
   if (value === null || value === undefined) {
-    return '-'
+    return "-";
   }
-  return String(value)
+  return String(value);
 }
 
 function isSelected(item: any) {
-  return props.selectedItems?.some(selected => 
-    props.getItemKey(selected, 0) === props.getItemKey(item, 0)
-  ) || false
+  return (
+    props.selectedItems?.some(
+      (selected) => props.getItemKey(selected, 0) === props.getItemKey(item, 0),
+    ) || false
+  );
 }
 </script>

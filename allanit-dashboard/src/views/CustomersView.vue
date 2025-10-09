@@ -9,7 +9,7 @@
       <div class="flex items-center space-x-3">
         <button
           @click="exportCustomers"
-          class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+          class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:border-gray-400"
         >
           Exportera CSV
         </button>
@@ -66,9 +66,6 @@
 
       <template #cell-name="{ item }">
         <div class="flex items-center space-x-3">
-          <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-            <UserIcon class="w-4 h-4 text-gray-600" />
-          </div>
           <div>
             <p class="text-sm font-medium text-gray-900">{{ item.name }}</p>
             <p class="text-xs text-gray-500">{{ item.external_id }}</p>
@@ -145,14 +142,17 @@
                 </div>
               </div>
 
+              <!-- Divider -->
+              <div class="border-t border-gray-200 my-4"></div>
+
               <div>
                 <h4 class="text-sm font-medium text-gray-900 mb-2">Statistik</h4>
                 <div class="grid grid-cols-2 gap-4">
-                  <div class="text-center p-3 bg-gray-50 rounded">
+                  <div class="text-center p-3 bg-white border border-gray-200 rounded">
                     <p class="text-lg font-semibold text-gray-900">{{ getCustomerOrderCount(selectedCustomer.id) }}</p>
                     <p class="text-xs text-gray-600">Totalt ordrar</p>
                   </div>
-                  <div class="text-center p-3 bg-gray-50 rounded">
+                  <div class="text-center p-3 bg-white border border-gray-200 rounded">
                     <p class="text-lg font-semibold text-gray-900">{{ getCustomerTotalAmount(selectedCustomer.id) }} SEK</p>
                     <p class="text-xs text-gray-600">Totalt belopp</p>
                   </div>
@@ -166,7 +166,7 @@
               <div
                 v-for="order in getCustomerOrders(selectedCustomer.id)"
                 :key="order.id"
-                class="p-3 border rounded-md hover:bg-gray-50 cursor-pointer"
+                class="p-3 bg-white border border-gray-200 rounded-md hover:border-gray-300 cursor-pointer transition-colors"
                 @click="viewOrder(order)"
               >
                 <div class="flex items-center justify-between">
@@ -267,7 +267,6 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { UserIcon } from '@heroicons/vue/24/outline'
 import DataTable from '@/components/ui/DataTable.vue'
 import FilterBar from '@/components/ui/FilterBar.vue'
 import DetailDrawer from '@/components/ui/DetailDrawer.vue'
