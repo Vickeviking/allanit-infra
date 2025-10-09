@@ -1,234 +1,351 @@
 <template>
-  <div class="space-y-6">
+  <div class="max-w-screen-xl mx-auto px-4">
     <!-- Header -->
-    <div class="flex items-center justify-between">
-      <div>
-        <h1 class="text-2xl font-bold text-gray-900">Loggar</h1>
-        <p class="text-gray-600">Systemloggar och aktivitetshistorik</p>
+    <div class="flex items-center justify-between mb-8">
+      <div class="flex items-center space-x-4">
+        <div class="p-3 bg-purple-100 rounded-xl">
+          <svg class="w-8 h-8 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"></path>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-3xl font-bold text-gray-900">Systemloggar</h1>
+          <p class="text-gray-600 mt-1">Systemloggar, debugging och utvecklingsverktyg</p>
+        </div>
       </div>
-      <div class="flex items-center space-x-3">
+
+      <div class="flex items-center space-x-4">
         <button
           @click="refreshLogs"
-          :disabled="loading"
-          class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
+          class="px-6 py-3 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 shadow-sm hover:shadow-md flex items-center space-x-2"
         >
-          {{ loading ? 'Laddar...' : 'Uppdatera' }}
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"></path>
+          </svg>
+          <span>Uppdatera</span>
         </button>
         <button
-          @click="exportLogs"
-          class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700"
+          @click="clearLogs"
+          class="px-6 py-3 text-sm font-semibold text-white bg-red-600 border border-transparent rounded-xl hover:bg-red-700 hover:shadow-lg transition-all duration-200 shadow-sm flex items-center space-x-2"
         >
-          Exportera
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" clip-rule="evenodd"></path>
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+          </svg>
+          <span>Rensa loggar</span>
         </button>
+      </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hover:shadow-lg transition-shadow duration-200">
+        <div class="text-center">
+          <div class="text-3xl font-bold text-blue-600 mb-2">{{ totalLogs.toLocaleString() }}</div>
+          <div class="text-sm text-gray-500 font-medium">Totalt loggar</div>
+          <div class="text-xs text-gray-400 mt-1">Senaste 24h</div>
+        </div>
+      </div>
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hover:shadow-lg transition-shadow duration-200">
+        <div class="text-center">
+          <div class="text-3xl font-bold text-red-600 mb-2">{{ errorCount.toLocaleString() }}</div>
+          <div class="text-sm text-gray-500 font-medium">Fel</div>
+          <div class="text-xs text-gray-400 mt-1">{{ Math.round((errorCount / totalLogs) * 100) }}% av totalt</div>
+        </div>
+      </div>
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hover:shadow-lg transition-shadow duration-200">
+        <div class="text-center">
+          <div class="text-3xl font-bold text-yellow-600 mb-2">{{ warningCount.toLocaleString() }}</div>
+          <div class="text-sm text-gray-500 font-medium">Varningar</div>
+          <div class="text-xs text-gray-400 mt-1">{{ Math.round((warningCount / totalLogs) * 100) }}% av totalt</div>
+        </div>
+      </div>
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hover:shadow-lg transition-shadow duration-200">
+        <div class="text-center">
+          <div class="text-3xl font-bold text-green-600 mb-2">{{ infoCount.toLocaleString() }}</div>
+          <div class="text-sm text-gray-500 font-medium">Info</div>
+          <div class="text-xs text-gray-400 mt-1">{{ Math.round((infoCount / totalLogs) * 100) }}% av totalt</div>
+        </div>
       </div>
     </div>
 
     <!-- Filters -->
-    <div class="bg-white rounded-lg shadow-sm border p-6">
-      <FilterBar
-        :show-date-range="true"
-        :select-filters="selectFilters"
-        @filter-change="handleFilterChange"
-      >
-        <template #actions>
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
+      <h3 class="text-lg font-semibold text-gray-900 mb-4">Filtrera loggar</h3>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Level Filter -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Nivå</label>
+          <select
+            v-model="filters.level"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+          >
+            <option value="">Alla nivåer</option>
+            <option value="ERROR">Error</option>
+            <option value="WARN">Warning</option>
+            <option value="INFO">Info</option>
+            <option value="DEBUG">Debug</option>
+          </select>
+        </div>
+
+        <!-- Module Filter -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Modul</label>
+          <select
+            v-model="filters.module"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+          >
+            <option value="">Alla moduler</option>
+            <option value="Fetcher">Fetcher</option>
+            <option value="Ingestor">Ingestor</option>
+            <option value="DbWriter">DbWriter</option>
+            <option value="DeadLetter">DeadLetter</option>
+            <option value="CommandBus">CommandBus</option>
+            <option value="Rocket">Rocket</option>
+            <option value="EmailService">EmailService</option>
+            <option value="AuthService">AuthService</option>
+            <option value="PaymentService">PaymentService</option>
+            <option value="NotificationService">NotificationService</option>
+          </select>
+        </div>
+
+        <!-- Action Filter -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Åtgärd</label>
+          <select
+            v-model="filters.action"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+          >
+            <option value="">Alla åtgärder</option>
+            <option value="FETCH">Fetch</option>
+            <option value="UPSERT">Upsert</option>
+            <option value="REPROCESS">Reprocess</option>
+            <option value="ERROR">Error</option>
+            <option value="SUCCESS">Success</option>
+            <option value="RETRY">Retry</option>
+            <option value="TIMEOUT">Timeout</option>
+            <option value="VALIDATION">Validation</option>
+            <option value="SEND">Send</option>
+            <option value="RECEIVE">Receive</option>
+            <option value="PROCESS">Process</option>
+            <option value="ARCHIVE">Archive</option>
+          </select>
+        </div>
+
+        <!-- Search -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Sök</label>
+          <input
+            v-model="filters.search"
+            type="text"
+            placeholder="Sök i meddelanden..."
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+          />
+        </div>
+      </div>
+
+      <div class="flex justify-between items-center mt-4">
+        <div class="text-sm text-gray-500">
+          Visar {{ filteredLogs.length }} av {{ totalLogs }} loggar
+        </div>
+        <div class="flex space-x-2">
           <button
-            @click="clearAllFilters"
-            class="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
+            @click="clearFilters"
+            class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
           >
-            Rensa alla
+            Rensa filter
           </button>
-        </template>
-      </FilterBar>
-    </div>
-
-    <!-- Logs List -->
-    <div class="bg-white rounded-lg shadow-sm border">
-      <div class="px-6 py-4 border-b border-gray-200">
-        <div class="flex items-center justify-between">
-          <h3 class="text-lg font-medium text-gray-900">Loggar</h3>
-          <div class="flex items-center space-x-4">
-            <div class="text-sm text-gray-600">
-              {{ filteredLogs.length }} loggar
-            </div>
-            <div class="flex items-center space-x-2">
-              <button
-                @click="toggleAutoRefresh"
-                class="px-3 py-1 text-sm rounded-md"
-                :class="autoRefresh ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'"
-              >
-                {{ autoRefresh ? 'Auto-uppdatering på' : 'Auto-uppdatering av' }}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="max-h-96 overflow-y-auto">
-        <div v-if="loading && logs.length === 0" class="p-6">
-          <div class="space-y-3">
-            <div v-for="i in 5" :key="i" class="animate-pulse">
-              <div class="h-4 bg-gray-200 rounded w-3/4"></div>
-            </div>
-          </div>
-        </div>
-
-        <div v-else-if="filteredLogs.length === 0" class="p-6 text-center">
-          <DocumentTextIcon class="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h3 class="text-lg font-medium text-gray-900 mb-2">Inga loggar</h3>
-          <p class="text-gray-600">Inga loggar matchar dina filter.</p>
-        </div>
-
-        <div v-else class="divide-y divide-gray-200">
-          <div
-            v-for="log in filteredLogs"
-            :key="log.id"
-            class="p-4 hover:bg-gray-50 cursor-pointer"
-            @click="openLogDetail(log)"
+          <button
+            @click="exportLogs"
+            class="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors"
           >
-            <div class="flex items-start space-x-3">
-              <div
-                class="w-2 h-2 rounded-full mt-2 flex-shrink-0"
-                :class="getLogLevelColor(log.level)"
-              ></div>
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center justify-between">
-                  <div class="flex items-center space-x-2">
-                    <span class="text-sm font-medium text-gray-900">{{ log.module }}</span>
-                    <span class="text-sm text-gray-500">•</span>
-                    <span class="text-sm text-gray-600">{{ log.action }}</span>
-                  </div>
-                  <span class="text-xs text-gray-500">{{ formatTime(log.created_at) }}</span>
-                </div>
-                <p v-if="log.custom_msg" class="text-sm text-gray-600 mt-1">
-                  {{ log.custom_msg }}
-                </p>
-                <div class="mt-2 flex items-center space-x-4 text-xs text-gray-500">
-                  <span>ID: {{ log.id }}</span>
-                  <span>Nivå: {{ log.level }}</span>
-                  <button
-                    @click.stop="viewRelatedEntity(log)"
-                    class="text-blue-600 hover:text-blue-800"
-                  >
-                    Visa relaterad entitet
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+            Exportera
+          </button>
         </div>
-      </div>
-
-      <!-- Load More -->
-      <div v-if="hasMoreLogs" class="px-6 py-4 border-t border-gray-200">
-        <button
-          @click="loadMoreLogs"
-          :disabled="loadingMore"
-          class="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
-        >
-          {{ loadingMore ? 'Laddar...' : 'Ladda fler loggar' }}
-        </button>
       </div>
     </div>
 
-    <!-- Log Detail Drawer -->
-    <div
-      v-if="selectedLog"
-      class="fixed inset-0 z-50 overflow-hidden"
-    >
-      <div class="absolute inset-0 bg-gray-500 bg-opacity-75" @click="closeLogDetail"></div>
-      <div class="absolute right-0 top-0 h-full w-96 bg-white shadow-xl">
-        <DetailDrawer
-          :title="`Logg ${selectedLog.id}`"
-          :tabs="logTabs"
-          :actions="logActions"
-          @close="closeLogDetail"
-          @action="handleLogAction"
-        >
-          <template #tab-summary>
-            <div class="space-y-4">
-              <div>
-                <h4 class="text-sm font-medium text-gray-900 mb-2">Logginformation</h4>
-                <div class="space-y-2">
-                  <div class="flex items-center justify-between">
-                    <span class="text-sm text-gray-600">Nivå:</span>
-                    <span
-                      class="inline-flex px-2 py-1 text-xs font-medium rounded-full"
-                      :class="getLogLevelColor(selectedLog.level)"
-                    >
-                      {{ selectedLog.level.toUpperCase() }}
-                    </span>
+    <!-- Logs Table -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-indigo-50">
+        <div class="flex items-center space-x-3">
+          <div class="p-2 bg-purple-100 rounded-lg">
+            <svg class="w-5 h-5 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"></path>
+            </svg>
+          </div>
+          <h3 class="text-lg font-bold text-gray-900">
+            Systemloggar
+          </h3>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                Tid
+              </th>
+              <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                Nivå
+              </th>
+              <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                Modul
+              </th>
+              <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                Åtgärd
+              </th>
+              <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                Meddelande
+              </th>
+              <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                Detaljer
+              </th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            <tr
+              v-for="log in paginatedLogs"
+              :key="log.id"
+              class="hover:bg-gray-50 transition-colors duration-200"
+            >
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <div class="flex items-center space-x-2">
+                  <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
+                  </svg>
+                  <span>{{ formatTime(log.created_at) }}</span>
+                </div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <span
+                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold"
+                  :class="getLevelClass(log.level)"
+                >
+                  {{ log.level }}
+                </span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <div class="flex items-center space-x-2">
+                  <div class="p-1 bg-gray-100 rounded">
+                    <svg class="w-3 h-3 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"></path>
+                    </svg>
                   </div>
-                  <div class="flex items-center justify-between">
-                    <span class="text-sm text-gray-600">Modul:</span>
-                    <span class="text-sm">{{ selectedLog.module }}</span>
-                  </div>
-                  <div class="flex items-center justify-between">
-                    <span class="text-sm text-gray-600">Åtgärd:</span>
-                    <span class="text-sm">{{ selectedLog.action }}</span>
-                  </div>
-                  <div class="flex items-center justify-between">
-                    <span class="text-sm text-gray-600">Skapad:</span>
-                    <span class="text-sm">{{ formatDateTime(selectedLog.created_at) }}</span>
-                  </div>
-                  <div class="flex items-center justify-between">
-                    <span class="text-sm text-gray-600">Expirerar:</span>
-                    <span class="text-sm">{{ formatDateTime(selectedLog.expires_at) }}</span>
+                  <span>{{ log.module }}</span>
+                </div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <span class="font-mono text-xs bg-gray-100 px-2 py-1 rounded">{{ log.action }}</span>
+              </td>
+              <td class="px-6 py-4 text-sm text-gray-900 max-w-md">
+                <div class="truncate">{{ log.custom_msg }}</div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <button
+                  @click="toggleLogDetails(log.id)"
+                  class="text-purple-600 hover:text-purple-800 font-medium"
+                >
+                  {{ expandedLogs.has(log.id) ? 'Dölj' : 'Visa' }}
+                </button>
+              </td>
+            </tr>
+            
+            <!-- Expanded Details Row -->
+            <tr
+              v-for="log in paginatedLogs"
+              :key="`details-${log.id}`"
+              v-show="expandedLogs.has(log.id)"
+              class="bg-gray-50"
+            >
+              <td colspan="6" class="px-6 py-4">
+                <div class="bg-white rounded-lg p-4 border border-gray-200">
+                  <h4 class="font-semibold text-gray-900 mb-3">Loggdetaljer</h4>
+                  
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <h5 class="text-sm font-medium text-gray-700 mb-2">Grundläggande information</h5>
+                      <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                          <span class="text-gray-500">ID:</span>
+                          <span class="font-mono">{{ log.id }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                          <span class="text-gray-500">Skapad:</span>
+                          <span>{{ formatDateTime(log.created_at) }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                          <span class="text-gray-500">Expirerar:</span>
+                          <span>{{ formatDateTime(log.expires_at) }}</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div v-if="log.details">
+                      <h5 class="text-sm font-medium text-gray-700 mb-2">Detaljer</h5>
+                      <div class="space-y-2 text-sm">
+                        <div v-if="log.details.duration" class="flex justify-between">
+                          <span class="text-gray-500">Varaktighet:</span>
+                          <span>{{ log.details.duration }}ms</span>
+                        </div>
+                        <div v-if="log.details.records_affected" class="flex justify-between">
+                          <span class="text-gray-500">Poster påverkade:</span>
+                          <span>{{ log.details.records_affected }}</span>
+                        </div>
+                        <div v-if="log.details.error_code" class="flex justify-between">
+                          <span class="text-gray-500">Felkod:</span>
+                          <span class="font-mono text-red-600">{{ log.details.error_code }}</span>
+                        </div>
+                        <div v-if="log.details.retry_count" class="flex justify-between">
+                          <span class="text-gray-500">Försök:</span>
+                          <span>{{ log.details.retry_count }}</span>
+                        </div>
+                        <div v-if="log.details.user_id" class="flex justify-between">
+                          <span class="text-gray-500">Användar-ID:</span>
+                          <span class="font-mono">{{ log.details.user_id }}</span>
+                        </div>
+                        <div v-if="log.details.request_id" class="flex justify-between">
+                          <span class="text-gray-500">Request-ID:</span>
+                          <span class="font-mono text-xs">{{ log.details.request_id }}</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
-              <div v-if="selectedLog.custom_msg">
-                <h4 class="text-sm font-medium text-gray-900 mb-2">Meddelande</h4>
-                <p class="text-sm text-gray-600">{{ selectedLog.custom_msg }}</p>
-              </div>
-            </div>
-          </template>
-
-          <template #tab-context>
-            <div class="space-y-4">
-              <div>
-                <h4 class="text-sm font-medium text-gray-900 mb-2">Kontext</h4>
-                <div class="bg-gray-50 rounded-lg p-4">
-                  <pre class="text-xs text-gray-600 whitespace-pre-wrap">{{ JSON.stringify({
-                    id: selectedLog.id,
-                    level: selectedLog.level,
-                    module: selectedLog.module,
-                    action: selectedLog.action,
-                    timestamp: selectedLog.created_at
-                  }, null, 2) }}</pre>
-                </div>
-              </div>
-            </div>
-          </template>
-
-          <template #tab-related>
-            <div class="space-y-4">
-              <div>
-                <h4 class="text-sm font-medium text-gray-900 mb-2">Relaterade entiteter</h4>
-                <div class="space-y-3">
-                  <button
-                    @click="viewRelatedCustomer"
-                    class="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-                  >
-                    Visa relaterad kund
-                  </button>
-                  <button
-                    @click="viewRelatedOrder"
-                    class="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-                  >
-                    Visa relaterad order
-                  </button>
-                  <button
-                    @click="viewRelatedSync"
-                    class="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-                  >
-                    Visa relaterad synk
-                  </button>
-                </div>
-              </div>
-            </div>
-          </template>
-        </DetailDrawer>
+      <!-- Pagination -->
+      <div class="px-6 py-4 border-t border-gray-200 bg-gray-50">
+        <div class="flex items-center justify-between">
+          <div class="text-sm text-gray-500">
+            Visar {{ (currentPage - 1) * itemsPerPage + 1 }} till {{ Math.min(currentPage * itemsPerPage, filteredLogs.length) }} av {{ filteredLogs.length }} loggar
+          </div>
+          <div class="flex space-x-2">
+            <button
+              @click="currentPage = Math.max(1, currentPage - 1)"
+              :disabled="currentPage === 1"
+              class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Föregående
+            </button>
+            <span class="px-3 py-2 text-sm text-gray-700">
+              Sida {{ currentPage }} av {{ totalPages }}
+            </span>
+            <button
+              @click="currentPage = Math.min(totalPages, currentPage + 1)"
+              :disabled="currentPage === totalPages"
+              class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Nästa
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>

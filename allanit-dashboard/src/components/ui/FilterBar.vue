@@ -13,7 +13,6 @@
           >Sök:</label
         >
         <div class="flex items-center gap-2 w-80">
-          <MagnifyingGlassIcon class="h-5 w-5 text-gray-400 flex-shrink-0" />
           <input
             v-model="searchQuery"
             type="text"

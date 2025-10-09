@@ -17,31 +17,33 @@
     </div>
 
     <!-- Stats Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-      <div class="bg-white rounded-lg shadow-sm border p-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hover:shadow-lg transition-shadow duration-200">
         <div class="text-center">
-          <div class="text-2xl font-bold text-gray-900">{{ totalSent }}</div>
-          <div class="text-sm text-gray-500">Totalt skickade</div>
+          <div class="text-3xl font-bold text-blue-600 mb-2">{{ totalSent.toLocaleString() }}</div>
+          <div class="text-sm text-gray-500 font-medium">Totalt skickade</div>
+          <div class="text-xs text-gray-400 mt-1">{{ sentEmails.length }} kampanjer</div>
         </div>
       </div>
-      <div class="bg-white rounded-lg shadow-sm border p-6">
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hover:shadow-lg transition-shadow duration-200">
         <div class="text-center">
-          <div class="text-2xl font-bold text-gray-900">
-            {{ totalDelivered }}
-          </div>
-          <div class="text-sm text-gray-500">Levererade</div>
+          <div class="text-3xl font-bold text-green-600 mb-2">{{ openRate }}%</div>
+          <div class="text-sm text-gray-500 font-medium">Öppningsgrad</div>
+          <div class="text-xs text-gray-400 mt-1">{{ totalOpened.toLocaleString() }} öppnade</div>
         </div>
       </div>
-      <div class="bg-white rounded-lg shadow-sm border p-6">
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hover:shadow-lg transition-shadow duration-200">
         <div class="text-center">
-          <div class="text-2xl font-bold text-gray-900">{{ totalOpened }}</div>
-          <div class="text-sm text-gray-500">Öppnade</div>
+          <div class="text-3xl font-bold text-purple-600 mb-2">{{ clickRate }}%</div>
+          <div class="text-sm text-gray-500 font-medium">Klickgrad</div>
+          <div class="text-xs text-gray-400 mt-1">{{ totalClicked.toLocaleString() }} klick</div>
         </div>
       </div>
-      <div class="bg-white rounded-lg shadow-sm border p-6">
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hover:shadow-lg transition-shadow duration-200">
         <div class="text-center">
-          <div class="text-2xl font-bold text-gray-900">{{ openRate }}%</div>
-          <div class="text-sm text-gray-500">Öppningsgrad</div>
+          <div class="text-3xl font-bold text-red-600 mb-2">{{ bounceRate }}%</div>
+          <div class="text-sm text-gray-500 font-medium">Studsgrad</div>
+          <div class="text-xs text-gray-400 mt-1">{{ totalBounced.toLocaleString() }} studsade</div>
         </div>
       </div>
     </div>
@@ -105,13 +107,19 @@
                 {{ email.template_name }}
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                {{ email.recipient_count }}
+                {{ email.to_count }}
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                {{ email.delivered_count }}
+                <div class="flex items-center space-x-2">
+                  <span class="font-medium">{{ email.delivered }}</span>
+                  <span class="text-xs text-gray-500">({{ Math.round((email.delivered / email.to_count) * 100) }}%)</span>
+                </div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                {{ email.opened_count }}
+                <div class="flex items-center space-x-2">
+                  <span class="font-medium">{{ email.opened }}</span>
+                  <span class="text-xs text-gray-500">({{ Math.round((email.opened / email.delivered) * 100) }}%)</span>
+                </div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                 {{ formatDate(email.sent_at) }}
@@ -131,20 +139,43 @@ import { http } from "@/api/mockClient";
 const sentEmails = ref<any[]>([]);
 
 const totalSent = computed(() =>
-  sentEmails.value.reduce((sum, email) => sum + email.recipient_count, 0),
+  sentEmails.value.reduce((sum, email) => sum + email.to_count, 0),
 );
 
 const totalDelivered = computed(() =>
-  sentEmails.value.reduce((sum, email) => sum + email.delivered_count, 0),
+  sentEmails.value.reduce((sum, email) => sum + email.delivered, 0),
 );
 
 const totalOpened = computed(() =>
-  sentEmails.value.reduce((sum, email) => sum + email.opened_count, 0),
+  sentEmails.value.reduce((sum, email) => sum + email.opened, 0),
+);
+
+const totalClicked = computed(() =>
+  sentEmails.value.reduce((sum, email) => sum + email.clicked, 0),
+);
+
+const totalBounced = computed(() =>
+  sentEmails.value.reduce((sum, email) => sum + email.bounced, 0),
 );
 
 const openRate = computed(() => {
   if (totalDelivered.value === 0) return 0;
   return Math.round((totalOpened.value / totalDelivered.value) * 100);
+});
+
+const clickRate = computed(() => {
+  if (totalOpened.value === 0) return 0;
+  return Math.round((totalClicked.value / totalOpened.value) * 100);
+});
+
+const bounceRate = computed(() => {
+  if (totalSent.value === 0) return 0;
+  return Math.round((totalBounced.value / totalSent.value) * 100);
+});
+
+const deliveryRate = computed(() => {
+  if (totalSent.value === 0) return 0;
+  return Math.round((totalDelivered.value / totalSent.value) * 100);
 });
 
 async function loadData() {

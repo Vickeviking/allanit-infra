@@ -9,25 +9,14 @@ import SettingsView from "@/views/SettingsView.vue";
 import EmailManagementView from "@/views/EmailManagementView.vue";
 import EmployeesView from "@/views/EmployeesView.vue";
 import InvoicesView from "@/views/InvoicesView.vue";
+import EmailHistoryView from "@/views/EmailHistoryView.vue";
+import SubsidiariesView from "@/views/SubsidiariesView.vue";
+import DeveloperView from "@/views/DeveloperView.vue";
+import CampaignsView from "@/views/CampaignsView.vue";
+import DeadLettersView from "@/views/DeadLettersView.vue";
+import LogsView from "@/views/LogsView.vue";
+import SyncView from "@/views/SyncView.vue";
 
-// Create simple placeholder components for the remaining ones
-const createPlaceholderComponent = (name: string) => ({
-  template: `
-    <div class="p-6">
-      <h1 class="text-2xl font-bold text-gray-900">${name}</h1>
-      <p class="text-gray-600 mt-2">Denna vy är under utveckling.</p>
-      <div class="mt-4 p-4 bg-blue-50 rounded-lg">
-        <p class="text-sm text-blue-800">
-          <strong>Status:</strong> Kommer snart med full funktionalitet!
-        </p>
-      </div>
-    </div>
-  `
-});
-
-const EmailHistoryView = createPlaceholderComponent('E-posthistorik');
-const SubsidiariesView = createPlaceholderComponent('Dotterbolag');
-const DeveloperView = createPlaceholderComponent('Utvecklare');
 
 export default createRouter({
   history: createWebHistory(),
@@ -95,6 +84,30 @@ export default createRouter({
       path: "/developer",
       name: "developer",
       component: DeveloperView,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: "/campaigns",
+      name: "campaigns",
+      component: CampaignsView,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: "/dead-letters",
+      name: "dead-letters",
+      component: DeadLettersView,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: "/logs",
+      name: "logs",
+      component: LogsView,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: "/sync",
+      name: "sync",
+      component: SyncView,
       meta: { requiresAuth: true }
     },
   ],

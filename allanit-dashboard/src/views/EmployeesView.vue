@@ -106,6 +106,157 @@
       </div>
     </div>
 
+    <!-- Employee Detail Modal -->
+    <div
+      v-if="selectedEmployee"
+      class="fixed inset-0 z-50 overflow-hidden"
+    >
+      <div class="absolute inset-0 bg-gray-500 bg-opacity-75" @click="closeEmployeeDetail"></div>
+      <div class="absolute inset-0 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+          <!-- Header -->
+          <div class="px-8 py-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-4">
+                <div class="relative">
+                  <img
+                    :src="selectedEmployee.image"
+                    :alt="selectedEmployee.name"
+                    class="w-16 h-16 rounded-full object-cover border-4 border-white shadow-lg"
+                    @error="handleImageError"
+                  />
+                  <div
+                    class="absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-4 border-white shadow-sm"
+                    :class="getStatusColor(selectedEmployee.status)"
+                  ></div>
+                </div>
+                <div>
+                  <h3 class="text-2xl font-bold text-gray-900">{{ selectedEmployee.name }}</h3>
+                  <p class="text-lg text-gray-600">{{ selectedEmployee.role }}</p>
+                  <p class="text-sm text-gray-500">{{ selectedEmployee.subsidiary }}</p>
+                </div>
+              </div>
+              <button
+                @click="closeEmployeeDetail"
+                class="p-3 text-gray-400 hover:text-gray-600 hover:bg-white/80 rounded-xl transition-all duration-200"
+              >
+                <XMarkIcon class="w-6 h-6" />
+              </button>
+            </div>
+          </div>
+
+          <!-- Content -->
+          <div class="flex-1 overflow-y-auto p-8">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <!-- Left Column - Personal Info -->
+              <div class="space-y-6">
+                <div class="bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl p-6 border border-gray-200">
+                  <h4 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <svg class="w-5 h-5 mr-2 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path>
+                    </svg>
+                    Kontaktinformation
+                  </h4>
+                  <div class="space-y-3">
+                    <div class="flex items-center space-x-3">
+                      <EnvelopeIcon class="w-5 h-5 text-gray-400" />
+                      <span class="text-gray-700">{{ selectedEmployee.email }}</span>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                      <PhoneIcon class="w-5 h-5 text-gray-400" />
+                      <span class="text-gray-700">{{ selectedEmployee.phone }}</span>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                      <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path>
+                      </svg>
+                      <span class="text-gray-700">{{ selectedEmployee.address || 'Adress inte angiven' }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 border border-gray-200">
+                  <h4 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <svg class="w-5 h-5 mr-2 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clip-rule="evenodd"></path>
+                    </svg>
+                    Anställningsinformation
+                  </h4>
+                  <div class="space-y-3">
+                    <div class="flex justify-between">
+                      <span class="text-gray-600">Status:</span>
+                      <span class="font-medium" :class="getStatusTextColor(selectedEmployee.status)">
+                        {{ getStatusLabel(selectedEmployee.status) }}
+                      </span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span class="text-gray-600">Anställningsdatum:</span>
+                      <span class="font-medium text-gray-900">{{ selectedEmployee.hireDate || 'Ej angivet' }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span class="text-gray-600">Avdelning:</span>
+                      <span class="font-medium text-gray-900">{{ selectedEmployee.department || 'Ej angivet' }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right Column - Journals -->
+              <div class="space-y-6">
+                <div class="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 border border-gray-200">
+                  <h4 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <svg class="w-5 h-5 mr-2 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"></path>
+                    </svg>
+                    Journaler ({{ getEmployeeJournals(selectedEmployee.id).length }})
+                  </h4>
+                  <div v-if="getEmployeeJournals(selectedEmployee.id).length > 0" class="space-y-3 max-h-64 overflow-y-auto">
+                    <div
+                      v-for="journal in getEmployeeJournals(selectedEmployee.id)"
+                      :key="journal.id"
+                      @click="selectJournal(journal)"
+                      class="p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:shadow-sm transition-all duration-200 cursor-pointer"
+                    >
+                      <h5 class="font-medium text-gray-900 text-sm">{{ journal.title }}</h5>
+                      <p class="text-xs text-gray-600 mt-1 line-clamp-2">{{ journal.body }}</p>
+                      <div class="flex items-center justify-between mt-2">
+                        <span class="text-xs text-gray-500">{{ journal.author }}</span>
+                        <span class="text-xs text-gray-500">{{ formatDate(journal.createdAt) }}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div v-else class="text-center py-8">
+                    <svg class="w-12 h-12 text-gray-300 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    <p class="text-sm text-gray-500">Inga journaler ännu</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="px-8 py-6 border-t border-gray-200 bg-gradient-to-r from-gray-50 to-white">
+            <div class="flex space-x-4">
+              <button
+                @click="closeEmployeeDetail"
+                class="px-6 py-3 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 shadow-sm hover:shadow-md"
+              >
+                Stäng
+              </button>
+              <button
+                @click="editEmployee"
+                class="px-6 py-3 text-sm font-semibold text-white bg-blue-600 border border-transparent rounded-xl hover:bg-blue-700 hover:shadow-lg transition-all duration-200 shadow-sm"
+              >
+                Redigera medarbetare
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Journal Detail Drawer -->
     <div
       v-if="selectedJournal"
@@ -251,6 +402,29 @@ function getStatusColor(status: string): string {
     on_leave: 'bg-yellow-500'
   }
   return colors[status as keyof typeof colors] || 'bg-gray-500'
+}
+
+function getStatusTextColor(status: string): string {
+  const colors = {
+    active: 'text-green-600',
+    inactive: 'text-gray-600',
+    on_leave: 'text-yellow-600'
+  }
+  return colors[status as keyof typeof colors] || 'text-gray-600'
+}
+
+function getStatusLabel(status: string): string {
+  const labels = {
+    active: 'Aktiv',
+    inactive: 'Inaktiv',
+    on_leave: 'Ledig'
+  }
+  return labels[status as keyof typeof labels] || status
+}
+
+function editEmployee() {
+  console.log('Edit employee:', selectedEmployee.value)
+  alert(`Redigera medarbetare: ${selectedEmployee.value.name}`)
 }
 
 function formatDate(dateString: string): string {
