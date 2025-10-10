@@ -191,11 +191,15 @@
                     </div>
                     <div class="flex justify-between">
                       <span class="text-gray-600">Anställningsdatum:</span>
-                      <span class="font-medium text-gray-900">{{ selectedEmployee.hireDate || 'Ej angivet' }}</span>
+                      <span class="font-medium text-gray-900">{{ selectedEmployee.hireDate ? formatDate(selectedEmployee.hireDate) : 'Ej angivet' }}</span>
                     </div>
                     <div class="flex justify-between">
                       <span class="text-gray-600">Avdelning:</span>
                       <span class="font-medium text-gray-900">{{ selectedEmployee.department || 'Ej angivet' }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span class="text-gray-600">Adress:</span>
+                      <span class="font-medium text-gray-900">{{ selectedEmployee.address || 'Ej angiven' }}</span>
                     </div>
                   </div>
                 </div>
@@ -433,7 +437,7 @@ function formatDate(dateString: string): string {
 
 function handleImageError(event: Event) {
   const img = event.target as HTMLImageElement
-  img.src = '/src/resources/medarbetare/default.jpg'
+  img.src = '/medarbetare/default.jpg'
 }
 
 onMounted(() => {

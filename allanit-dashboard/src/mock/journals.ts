@@ -152,6 +152,76 @@ export const journals: Journal[] = [
     priority: "medium",
     status: "published",
     attachments: ["underhållsrapport_städutrustning.pdf"]
+  },
+  {
+    id: "111",
+    employeeId: "5", // Knut Rogerson
+    title: "Gult kort för fortkörning",
+    body: "Fick gult kort för fortkörning på väg till jobbet. Polisen sa att jag körde 85 km/h i 50-zon. Överväger om jag får jobba kvar eller om jag ska sparkas på snäckt sätt. Chef Tobias sa att det är första varningen.",
+    createdAt: "2025-11-01T08:30:00Z",
+    updatedAt: "2025-11-01T08:30:00Z",
+    author: "Knut Rogerson",
+    tags: ["trafik", "varning", "fortkörning", "gult kort"],
+    category: "safety",
+    priority: "high",
+    status: "published",
+    attachments: ["gult_kort_bot.pdf"]
+  },
+  {
+    id: "112",
+    employeeId: "6", // Niklas Danielsson
+    title: "Dött i plogolycka - ta bort användarprofil",
+    body: "RIP Niklas Danielsson. Omkom i tragisk plogolycka när han körde snöröjningsmaskinen. Han var en av våra bästa chefer på Industrimålning. Begravning nästa vecka. HR ska ta bort hans användarprofil från systemet.",
+    createdAt: "2025-11-05T14:00:00Z",
+    updatedAt: "2025-11-05T14:00:00Z",
+    author: "Tobias Högberg",
+    tags: ["olycka", "död", "plog", "begravning", "hr"],
+    category: "general",
+    priority: "critical",
+    status: "published",
+    attachments: ["dödsattest_niklas.pdf", "olycksrapport.pdf"]
+  },
+  {
+    id: "113",
+    employeeId: "7", // Zamdall Gröndal
+    title: "Målade fel färg på hela fabriken",
+    body: "Oj, målade hela fabriken i rosa istället för grå som kunden ville ha. Chef Knut sa att det är 'kreativt' men kunden är inte så glad. Får nog måla om hela skiten. Detta kommer att kosta oss en förmögenhet.",
+    createdAt: "2025-11-08T16:20:00Z",
+    updatedAt: "2025-11-08T16:20:00Z",
+    author: "Zamdall Gröndal",
+    tags: ["fel färg", "rosa", "fabrik", "kostnad", "omålning"],
+    category: "work",
+    priority: "high",
+    status: "published",
+    attachments: ["bilder_rosa_fabrik.jpg", "kundklagomål.pdf"]
+  },
+  {
+    id: "114",
+    employeeId: "8", // Åke Jäger
+    title: "Skyddsmålning blev för skyddad",
+    body: "Målade skyddsfärg så tjockt att dörrarna inte går att öppna längre. Kunden sa att det är 'överdrivet säkert' men nu kan ingen komma in eller ut från byggnaden. Behöver skrapa bort halva målningslagret.",
+    createdAt: "2025-11-10T11:45:00Z",
+    updatedAt: "2025-11-10T11:45:00Z",
+    author: "Åke Jäger",
+    tags: ["skyddsmålning", "tjockt", "dörrar", "fast", "skrapning"],
+    category: "work",
+    priority: "high",
+    status: "published",
+    attachments: ["bilder_fasta_dörrar.jpg", "reparationskostnad.pdf"]
+  },
+  {
+    id: "115",
+    employeeId: "5", // Knut Rogerson
+    title: "Fortsatt problem med trafik",
+    body: "Fick ännu ett gult kort, denna gång för att köra på rött ljus. Chef Tobias sa att det är andra varningen och att jag måste sluta köra som en galning. Överväger att ta bussen till jobbet istället.",
+    createdAt: "2025-11-12T09:15:00Z",
+    updatedAt: "2025-11-12T09:15:00Z",
+    author: "Knut Rogerson",
+    tags: ["trafik", "rött ljus", "andra varningen", "buss"],
+    category: "safety",
+    priority: "high",
+    status: "published",
+    attachments: ["gult_kort_rött_ljus.pdf"]
   }
 ]
 

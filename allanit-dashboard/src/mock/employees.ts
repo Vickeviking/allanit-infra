@@ -7,7 +7,10 @@ export default [
     phone: "08-123 45 67",
     image: "/medarbetare/tobias.jpg",
     subsidiary: "Allanit Service AB",
-    status: "active"
+    status: "active",
+    hireDate: "2018-05-15",
+    department: "Ledning",
+    address: "Vasagatan 8, Stockholm"
   },
   {
     id: 4,
@@ -16,8 +19,11 @@ export default [
     email: "johan@allanit.se",
     phone: "08-456 78 90",
     image: "/medarbetare/johan.jpg",
-    subsidiary: "Industrimålning Stockholm AB",
-    status: "active"
+    subsidiary: "Allanit Service AB",
+    status: "active",
+    hireDate: "2020-03-15",
+    department: "Ledning",
+    address: "Storgatan 12, Stockholm"
   },
   {
     id: 2,
@@ -27,7 +33,10 @@ export default [
     phone: "08-234 56 78",
     image: "/medarbetare/alfons.jpg",
     subsidiary: "Allanit Service AB",
-    status: "active"
+    status: "active",
+    hireDate: "2019-08-20",
+    department: "Operation",
+    address: "Birger Jarlsgatan 15, Stockholm"
   },
   {
     id: 3,
@@ -37,6 +46,61 @@ export default [
     phone: "08-345 67 89",
     image: "/medarbetare/janus.jpg",
     subsidiary: "Allanit Service AB",
-    status: "active"
+    status: "active",
+    hireDate: "2021-01-10",
+    department: "Teknik",
+    address: "Drottninggatan 22, Stockholm"
+  },
+  {
+    id: 5,
+    name: "Knut Rogerson",
+    role: "Chef",
+    email: "knut@industrimålning.se",
+    phone: "08-567 89 01",
+    image: "/medarbetare/knut.png",
+    subsidiary: "Industrimålning Stockholm AB",
+    status: "active",
+    hireDate: "2018-03-15",
+    department: "Ledning",
+    address: "Industrigatan 12, Stockholm"
+  },
+  {
+    id: 6,
+    name: "Niklas Danielsson",
+    role: "Chef",
+    email: "niklas@industrimålning.se",
+    phone: "08-678 90 12",
+    image: "/medarbetare/niklas.png",
+    subsidiary: "Industrimålning Stockholm AB",
+    status: "active",
+    hireDate: "2019-06-01",
+    department: "Ledning",
+    address: "Fabriksvägen 8, Stockholm"
+  },
+  {
+    id: 7,
+    name: "Zamdall Gröndal",
+    role: "Målare",
+    email: "zamdall@industrimålning.se",
+    phone: "08-789 01 23",
+    image: "/medarbetare/zamdall.png",
+    subsidiary: "Industrimålning Stockholm AB",
+    status: "active",
+    hireDate: "2020-02-20",
+    department: "Produktion",
+    address: "Målarvägen 15, Stockholm"
+  },
+  {
+    id: 8,
+    name: "Åke Jäger",
+    role: "Skyddsmålare",
+    email: "ake@industrimålning.se",
+    phone: "08-890 12 34",
+    image: "/medarbetare/ake.png",
+    subsidiary: "Industrimålning Stockholm AB",
+    status: "active",
+    hireDate: "2021-08-10",
+    department: "Specialist",
+    address: "Skyddsgatan 22, Stockholm"
   }
 ]

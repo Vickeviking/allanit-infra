@@ -13,11 +13,44 @@ export interface PurchaseOrder {
   id: number;
   external_id: string;
   customer_id: number | null;
-  status: string;
+  status: 'not_planned' | 'planned' | 'in_progress' | 'paused' | 'waiting_for_materials' | 'blocked' | 'in_review' | 'completed' | 'cancelled';
   description: string | null;
   amount: number;
-  created_at: string; // ISO
-  updated_at: string; // ISO
+  
+  // New fields
+  assigned_employee_id?: number;  // Assigned medarbetare
+  supervisor_id?: number;          // Handledare/ansvarig
+  scheduled_date?: string;         // Planerat datum
+  completed_date?: string;         // Slutfört datum
+  notes?: string;                  // Admin anteckningar
+  company: 'allanit' | 'industrimålning';  // Vilket företag
+  priority: 'low' | 'medium' | 'high';     // Prioritet
+  dueDate?: string;               // Förfallodatum
+  
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OrderComment {
+  id: string;
+  orderId: number;
+  employeeId: number;
+  comment: string;
+  createdAt: string;
+  status?: string; // Optional status change with comment
+}
+
+export interface MachineFaultReport {
+  id: string;
+  machineId: number;
+  reportedBy: number; // employeeId
+  title: string;
+  description: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  status: 'reported' | 'acknowledged' | 'in_repair' | 'resolved';
+  reportedAt: string;
+  resolvedAt?: string;
+  notes?: string;
 }
 
 export interface EmailInbound {
@@ -62,4 +95,47 @@ export interface User {
   username: string;
   email: string;
   created_at: string;
+}
+
+export type UserRole = 'administrator' | 'employee'
+
+export interface AuthenticatedUser {
+  id: number
+  username: string
+  name: string
+  role: UserRole
+  employeeId?: number
+}
+
+export interface Machine {
+  id: number
+  name: string
+  model: string
+  category: 'transport' | 'cleaning' | 'winter'
+  image: string
+  nextServiceDate: string
+  responsibleEmployeeId: number
+  status: 'operational' | 'maintenance' | 'out_of_service'
+  purchaseDate: string
+  hours?: number
+  kilometers?: number
+  location: string
+  description?: string
+  created_at: string
+  updated_at: string
+}
+
+export type MachineJournal = {
+  id: string
+  machineId: string
+  title: string
+  body: string
+  createdAt: string
+  updatedAt?: string
+  author: string
+  tags: string[]
+  category: 'maintenance' | 'repair' | 'inspection' | 'cleaning' | 'upgrade' | 'general'
+  priority: 'low' | 'medium' | 'high'
+  status: 'draft' | 'published' | 'archived'
+  attachments?: string[]
 }

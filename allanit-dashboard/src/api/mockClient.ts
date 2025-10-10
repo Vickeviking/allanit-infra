@@ -13,6 +13,10 @@ import sends from "@/mock/campaign_sends.ts";
 import logs from "@/mock/logs.ts";
 import syncHistory from "@/mock/sync_history.ts";
 import invoices from "@/mock/invoices.ts";
+import machines from "@/mock/machines.ts";
+import machineJournals from "@/mock/machineJournals.ts";
+import orderComments from "@/mock/orderComments.ts";
+import machineFaultReports from "@/mock/machineFaultReports.ts";
 
 type Resp<T> = { data: T };
 
@@ -66,6 +70,18 @@ export const http = {
     if (url.startsWith("/api/subsidiaries")) {
       return { data: { results: subsidiaries } as T };
     }
+    if (url.startsWith("/api/machines")) {
+      return { data: { results: machines } as T };
+    }
+        if (url.startsWith("/api/journals/machine")) {
+          return { data: { results: machineJournals.machine } as T };
+        }
+        if (url.startsWith("/api/order-comments")) {
+          return { data: { results: orderComments } as T };
+        }
+        if (url.startsWith("/api/machine-fault-reports")) {
+          return { data: { results: machineFaultReports } as T };
+        }
     if (url.startsWith("/api/mail/templates")) {
       return { data: { results: templates } as T };
     }
